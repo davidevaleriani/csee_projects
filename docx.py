@@ -17,23 +17,23 @@ import zipfile
 from lxml import etree
 from os.path import abspath, basename, join
 
-try:
-    from PIL import Image
-except ImportError:
-    import Image
+#try:
+#    from PIL import Image
+#except ImportError:
+#    import Image
 
-try:
-    from PIL.ExifTags import TAGS
-except ImportError:
-    TAGS = {}
+#try:
+#    from PIL.ExifTags import TAGS
+#except ImportError:
+#    TAGS = {}
 
-from exceptions import PendingDeprecationWarning
-from warnings import warn
+#from exceptions import PendingDeprecationWarning
+#from warnings import warn
 
-import logging
+#import logging
 
 
-log = logging.getLogger(__name__)
+#log = logging.getLogger(__name__)
 
 # Record template directory's location which is just 'template' for a docx
 # developer or 'site-packages/docx-template' if you have installed docx
