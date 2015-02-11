@@ -73,7 +73,7 @@ for row in csv.reader(csv_file, delimiter=";", quotechar='|'):
         exit(1)
     else:
         # Open template docx
-        zip = zipfile.ZipFile(open(template_filename))
+        zip = zipfile.ZipFile(template_filename)
         # Read the xml document, that is basically the "proper" document file
         word_xml = zip.read('word/document.xml')
         # Get the XML tree
@@ -93,7 +93,7 @@ for row in csv.reader(csv_file, delimiter=";", quotechar='|'):
         zip.extractall(tmp_dir)
 
         # Overwrite the xml file with new data
-        with open(os.path.join(tmp_dir, 'word/document.xml'), 'w') as f:
+        with open(os.path.join(tmp_dir, 'word/document.xml'), 'wb') as f:
             xmlstr = etree.tostring(tree, pretty_print=True)
             f.write(xmlstr)
 
