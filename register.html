@@ -1,0 +1,101 @@
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap.min.css">
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/js/bootstrap.min.js"></script>
+    <title>CSEE Grades Automator</title>
+    <style>
+        /* Wrapper for page content to push down footer */
+        html, body {
+        padding-top: 0px;
+        font-size: 15px;
+        height: 100%;
+        }
+
+        #wrap {
+        min-height: 100%;
+        height: auto !important;
+        height: 100%;
+        /* Negative indent footer by it's height */
+        margin: 0 auto -40px;
+        padding-bottom: 10px;
+        }
+
+        /* Set the fixed height of the footer here */
+        #push,
+        #footer {
+        height: 40px;
+        padding-top: 10px;
+        }
+        #footer {
+        font-size: 12px;
+        background-color: #ddd;
+        text-align: center;
+        }
+    </style>
+</head>
+<body>
+<div id="wrap">
+    <div class="container">
+        <h2 align="center">Welcome to CSEE Grades Automator</h2>
+        <p align="center">This application allows you to generate the mark forms for final year projects.</p>
+        <br>
+        <form method="get" action="generate" enctype="multipart/form-data" class="form-horizontal">
+            <div class="form-group">
+                <label for="template_sup" class="col-xs-2 col-xs-offset-2 control-label">Template Supervisor</label>
+                <div class="col-xs-6">
+                    <input type="file" name="template_sup" id="template_sup" />
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="template_sec" class="col-xs-2 col-xs-offset-2 control-label">Template Second Assessor</label>
+                <div class="col-xs-6">
+                    <input type="file" name="template_sec" id="template_sec" />
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="students_list" class="col-xs-2 col-xs-offset-2 control-label">Students' list</label>
+                <div class="col-xs-6">
+                    <input type="file" name="students_list" id="students_list" />
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="name_column" class="col-xs-2 col-xs-offset-2 control-label">Student name column</label>
+                <div class="col-xs-6">
+                    <input type="number" class="form-control" name="name_column" min="1" value="2" id="name_column" />
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="regno_column" class="col-xs-2 col-xs-offset-2 control-label">Student registration number column</label>
+                <div class="col-xs-6">
+                    <input type="number" class="form-control" name="regno_column" min="1" value="1" id="regno_column" />
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="sup_column" class="col-xs-2 col-xs-offset-2 control-label">Student supervisor column</label>
+                <div class="col-xs-6">
+                    <input type="number" class="form-control" name="sup_column" min="1" value="7" id="sup_column" />
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="sec_column" class="col-xs-2 col-xs-offset-2 control-label">Student second assessor column</label>
+                <div class="col-xs-6">
+                    <input type="number" class="form-control" name="sec_column" min="1" value="8" id="sec_column" />
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-xs-offset-6 col-sm-6">
+                    <button type="submit" class="btn btn-primary">Generate</button>
+                </div>
+            </div>
+        </form>
+    </div>
+    <div id="push"></div>
+</div>
+<div id="footer">
+    <div class="container">
+        <p class="muted credit">Website maintained by <a href="http://www.davidevaleriani.it">Davide Valeriani</a>.</p>
+    </div>
+</div>
+</body>
+</html>
