@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap.min.css">
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/js/bootstrap.min.js"></script>
+    <link rel="stylesheet" href="/css/style.css">
+    <title>CEEC 2015 Poker Expected Hand Strength Generalization</title>
+    <link rel="shortcut icon" href="/img/favicon.ico" type="image/x-icon" />
+</head>
+<body>
+<div id="wrap">
+    <nav class="navbar navbar-default navbar-fixed-top">
+        <div class="container-fluid" align="center">
+            <div class="navbar-header">
+                <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#topmenu">
+                    <span class="sr-only">Toggle navigation</span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                </button>
+            </div>
+            <div class="collapse navbar-collapse" id="topmenu">
+                <ul class="nav navbar-nav">
+                    {% for item in navigation %}
+                        {% if item.active == True %}
+                            <li class="active"><a href="{{ item.link }}">{{ item.caption }}</a></li>
+                        {% else %}
+                            <li><a href="{{ item.link }}">{{ item.caption }}</a></li>
+                        {% endif %}
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+    </nav>
+    <div class="container">
+        {% block user_info %}
+        {% endblock %}
+        <h2 align="center">CEEC 2015 Poker Expected Hand Strength Generalization Competition</h2>
+        <p align="center">
+            <img src="/img/poker.png" class="topimg">
+        </p>
+        {% for item in content %}
+        <h2>{{ item.title }}</h2>
+        <p>
+            {{ item.text }}
+        </p>
+        {% endfor %}
+    </div>
+    <div id="push"></div>
+</div>
+<div id="footer">
+    <div class="container">
+        <p class="muted credit">Website maintained by <a href="http://www.davidevaleriani.it">Davide Valeriani</a>.</p>
+    </div>
+</div>
+</body>
+</html>
