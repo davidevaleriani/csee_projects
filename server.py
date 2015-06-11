@@ -13,7 +13,7 @@ from email.mime.text import MIMEText
 import datetime
 
 db_name = "users.db"
-base_site = "http://localhost:8080"
+base_site = "http://ec2-54-174-117-27.compute-1.amazonaws.com:8080/"
 
 env = Environment(loader=FileSystemLoader('templates'))
 menu = [{"link": "/", "caption": "Home", "active": False},
@@ -303,15 +303,37 @@ class Submit(object):
             raise cherrypy.HTTPRedirect("/login")
 
     @cherrypy.expose
-    def make_submission(self, entry):
-        # Save the file
+    def make_submission(self, entry10, entry100, entry1000):
+        if entry10.filename == "" or entry100.filename == "" or entry1000.filename == "":
+            template = env.get_template("template.html")
+            current_menu = copy(menu_logged)
+            current_menu[4]["active"] = True
+            content = [{"title": "File missing!", "text": "<p style='color:red'>Please upload the three requested TXT files.</p>"}]
+            return template.render(navigation=current_menu, content=content)
+        if entry10.filename[-3:].upper() != "TXT" or entry100.filename[-3:].upper() != "TXT" or entry1000.filename[-3:].upper() != "TXT":
+            template = env.get_template("template.html")
+            current_menu = copy(menu_logged)
+            current_menu[4]["active"] = True
+            content = [{"title": "File not valid!", "text": "<p style='color:red'>One of the files you are trying to upload is not a TXT file.</p>"}]
+            return template.render(navigation=current_menu, content=content)
+        # Save the files
         date = time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime())
-        filename = str(cherrypy.session["id"])+"_"+date.replace(" ", "_")+".txt"
+        filename = str(cherrypy.session["id"])+"_"+date.replace(" ", "_")+"_10.txt"
         output = open("submissions/"+filename, "w")
-        output.write(entry.file.read())
+        output.write(entry10.file.read())
         output.close()
+        filename = str(cherrypy.session["id"])+"_"+date.replace(" ", "_")+"_100.txt"
+        output = open("submissions/"+filename, "w")
+        output.write(entry100.file.read())
+        output.close()
+        filename = str(cherrypy.session["id"])+"_"+date.replace(" ", "_")+"_1000.txt"
+        output = open("submissions/"+filename, "w")
+        output.write(entry1000.file.read())
+        output.close()
+
         # TODO Process the file to compute the score
         score = random.random()
+
         # Store the score in the database
         conn = sqlite3.connect(db_name)
         c = conn.cursor()
@@ -340,8 +362,6 @@ class Rank(object):
         c = conn.cursor()
         c.execute("SELECT u.username, s.date, s.score FROM users as u, submissions as s WHERE u.id = s.author ORDER BY s.score DESC, s.date DESC")
         res = c.fetchall()
-        for subm in res:
-            print(subm)
         template = env.get_template("template_rank.html")
         if is_logged():
             current_menu = copy(menu_logged)
@@ -359,6 +379,7 @@ def get_users():
 
 if __name__ == '__main__':
     cherrypy.server.socket_host = '0.0.0.0'
+    cherrypy.server.socket_port = 8080
     users = {"admin": "secretPassword", "editor": "otherPassword"}
     conf = {'/': {'tools.sessions.on': True,
                   'tools.staticdir.on': True,
