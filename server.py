@@ -11,24 +11,27 @@ from copy import deepcopy as copy
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 import datetime
+from score import get_score
 
 db_name = "users.db"
-base_site = "http://ec2-54-174-117-27.compute-1.amazonaws.com:8080/"
+base_site = "http://cseepgdp2.essex.ac.uk/ceec-poker/"
+#base_site = "http://127.0.0.1:8081/ceec-poker/"
+site_port = 8081
 
 env = Environment(loader=FileSystemLoader('templates'))
-menu = [{"link": "/", "caption": "Home", "active": False},
-        {"link": "/data", "caption": "Get the data", "active": False},
-        {"link": "/rank", "caption": "Leaderboard", "active": False},
-        {"link": "/about", "caption": "About", "active": False},
-        {"link": "/login", "caption": "Login", "active": False},
-        {"link": "/signup", "caption": "Signup", "active": False},
+menu = [{"link": base_site+"home", "caption": "Home", "active": False},
+        {"link": base_site+"data", "caption": "Get the data", "active": False},
+        {"link": base_site+"rank", "caption": "Leaderboard", "active": False},
+        {"link": base_site+"about", "caption": "About", "active": False},
+        {"link": base_site+"login", "caption": "Login", "active": False},
+        {"link": base_site+"signup", "caption": "Signup", "active": False},
         ]
-menu_logged = [{"link": "/", "caption": "Home", "active": False},
-        {"link": "/data", "caption": "Get the data", "active": False},
-        {"link": "/rank", "caption": "Leaderboard", "active": False},
-        {"link": "/about", "caption": "About", "active": False},
-        {"link": "/submit", "caption": "Submit", "active": False},
-        {"link": "/logout", "caption": "Logout", "active": False},
+menu_logged = [{"link": base_site+"home", "caption": "Home", "active": False},
+        {"link": base_site+"data", "caption": "Get the data", "active": False},
+        {"link": base_site+"rank", "caption": "Leaderboard", "active": False},
+        {"link": base_site+"about", "caption": "About", "active": False},
+        {"link": base_site+"submit", "caption": "Submit", "active": False},
+        {"link": base_site+"logout", "caption": "Logout", "active": False},
         ]
 
 
@@ -43,6 +46,13 @@ def is_logged():
     return False
 
 
+class Index(object):
+    @cherrypy.expose
+    def index(self):
+        print("REDIRECT")
+        raise cherrypy.HTTPRedirect("home/")
+
+
 class HomePage(object):
     @cherrypy.expose
     def index(self):
@@ -53,9 +63,9 @@ class HomePage(object):
             current_menu = copy(menu)
         current_menu[0]["active"] = True
         content = [{"title": "Description", "text": (''.join(open("index.html").readlines())).decode('utf-8')},
-                   {"title": "Getting started", "text": "<h3><a href='data/'>Get the data</a> &#8594; "
-                                                        "<a href='signup/'>Signup</a> &#8594; "
-                                                        "<a href='submit/'>Submit</a></h3>"}]
+                   {"title": "Getting started", "text": "<h3><a href='../data/'>Get the data</a> &#8594; "
+                                                        "<a href='../signup/'>Signup</a> &#8594; "
+                                                        "<a href='../submit/'>Submit</a></h3>"}]
         return template.render(navigation=current_menu, content=content)
 
 
@@ -166,14 +176,14 @@ class Activate(object):
         if res is not None:
             template = env.get_template("template.html")
             current_menu = copy(menu)
-            content = [{"title": "Error", "text": "<p style='color:red'>Your account has already been activated. Please <a href='/login'>login</a>.</p>"}]
+            content = [{"title": "Error", "text": "<p style='color:red'>Your account has already been activated. Please <a href='../login'>login</a>.</p>"}]
             return template.render(navigation=current_menu, content=content)
         c.execute("UPDATE users SET active=1 WHERE username = ?", [user])
         conn.commit()
         conn.close()
         template = env.get_template("template.html")
         current_menu = copy(menu)
-        content = [{"title": "Account activated!", "text": "You can now <a href='/login'>login</a> and start submitting.</p>"}]
+        content = [{"title": "Account activated!", "text": "You can now <a href='../login'>login</a> and start submitting.</p>"}]
         return template.render(navigation=current_menu, content=content)
 
 
@@ -300,39 +310,43 @@ class Submit(object):
             user = {"name": cherrypy.session["name"]}
             return template.render(navigation=current_menu, content=content, user=user)
         else:
-            raise cherrypy.HTTPRedirect("/login")
+            raise cherrypy.HTTPRedirect("../login")
 
     @cherrypy.expose
-    def make_submission(self, entry10, entry100, entry1000):
-        if entry10.filename == "" or entry100.filename == "" or entry1000.filename == "":
+    def make_submission(self, entry1000, entry10000, entry20000):
+        if entry1000.filename == "" or entry10000.filename == "" or entry20000.filename == "":
             template = env.get_template("template.html")
             current_menu = copy(menu_logged)
             current_menu[4]["active"] = True
             content = [{"title": "File missing!", "text": "<p style='color:red'>Please upload the three requested TXT files.</p>"}]
             return template.render(navigation=current_menu, content=content)
-        if entry10.filename[-3:].upper() != "TXT" or entry100.filename[-3:].upper() != "TXT" or entry1000.filename[-3:].upper() != "TXT":
+        if entry1000.filename[-3:].upper() != "TXT" or entry10000.filename[-3:].upper() != "TXT" or entry20000.filename[-3:].upper() != "TXT":
             template = env.get_template("template.html")
             current_menu = copy(menu_logged)
             current_menu[4]["active"] = True
             content = [{"title": "File not valid!", "text": "<p style='color:red'>One of the files you are trying to upload is not a TXT file.</p>"}]
             return template.render(navigation=current_menu, content=content)
-        # Save the files
+        # Save the files in the submission directory
         date = time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime())
-        filename = str(cherrypy.session["id"])+"_"+date.replace(" ", "_")+"_10.txt"
-        output = open("submissions/"+filename, "w")
-        output.write(entry10.file.read())
-        output.close()
-        filename = str(cherrypy.session["id"])+"_"+date.replace(" ", "_")+"_100.txt"
-        output = open("submissions/"+filename, "w")
-        output.write(entry100.file.read())
-        output.close()
-        filename = str(cherrypy.session["id"])+"_"+date.replace(" ", "_")+"_1000.txt"
+        submission_dir = date+str(cherrypy.session["id"])+"_"+date.replace(" ", "_")+"/"
+        if not os.path.exists(submission_dir):
+            os.makedirs(submission_dir)
+        filename = submission_dir+"sample_1000.csv"
         output = open("submissions/"+filename, "w")
         output.write(entry1000.file.read())
         output.close()
+        filename = submission_dir+"sample_10000.csv"
+        output = open("submissions/"+filename, "w")
+        output.write(entry10000.file.read())
+        output.close()
+        filename = submission_dir+"sample_20000.csv"
+        output = open("submissions/"+filename, "w")
+        output.write(entry20000.file.read())
+        output.close()
 
         # TODO Process the file to compute the score
-        score = random.random()
+        score = get_score(submission_dir)
+        print("Score =>", score)
 
         # Store the score in the database
         conn = sqlite3.connect(db_name)
@@ -379,14 +393,15 @@ def get_users():
 
 if __name__ == '__main__':
     cherrypy.server.socket_host = '0.0.0.0'
-    cherrypy.server.socket_port = 8080
+    cherrypy.server.socket_port = site_port
     users = {"admin": "secretPassword", "editor": "otherPassword"}
     conf = {'/': {'tools.sessions.on': True,
                   'tools.staticdir.on': True,
                   'tools.staticdir.dir': os.path.abspath(os.getcwd())
                   },
             }
-    root = HomePage()
+    root = Index()
+    root.home = HomePage()
     root.data = Data()
     root.about = About()
     root.login = Login()
@@ -396,4 +411,4 @@ if __name__ == '__main__':
     root.submit = Submit()
     root.rank = Rank()
     root.activate = Activate()
-    cherrypy.quickstart(root, '/', config=conf)
+    cherrypy.quickstart(root, '/ceec-poker', config=conf)
