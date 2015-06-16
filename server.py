@@ -328,7 +328,7 @@ class Submit(object):
             return template.render(navigation=current_menu, content=content)
         # Save the files in the submission directory
         date = time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime())
-        submission_dir = date+str(cherrypy.session["id"])+"_"+date.replace(" ", "_")+"/"
+        submission_dir = str(cherrypy.session["id"])+"_"+date.replace(" ", "_")+"/"
         if not os.path.exists(submission_dir):
             os.makedirs(submission_dir)
         filename = submission_dir+"sample_1000.csv"
