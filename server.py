@@ -373,7 +373,7 @@ class Rank(object):
     def index(self):
         conn = sqlite3.connect(db_name)
         c = conn.cursor()
-        c.execute("SELECT u.username, s.date, s.score FROM users as u, submissions as s WHERE u.id = s.author ORDER BY s.score DESC, s.date DESC")
+        c.execute("SELECT u.username, s.date, s.score FROM users as u, submissions as s WHERE u.id = s.author ORDER BY s.score, s.date")
         res = c.fetchall()
         template = env.get_template("template_rank.html")
         if is_logged():
