@@ -344,9 +344,8 @@ class Submit(object):
         output.write(entry20000.file.read())
         output.close()
 
-        # TODO Process the file to compute the score
+        # Get the score
         score = get_score(submission_dir)
-        print("Score =>", score)
 
         # Store the score in the database
         conn = sqlite3.connect(db_name)
@@ -355,8 +354,8 @@ class Submit(object):
                   [cherrypy.session["id"], date, score])
         conn.commit()
         conn.close()
-        score_text = "This submission has achieved a score of <strong>"+str(score)+"</strong> on the validation set." \
-                                                                                   "<br><a class='btn btn-success' href='/rank'>Check the rank</a>"
+        score_text = "This submission has achieved a score of <strong>"+str(round(score, 5))+"</strong> on the validation set." \
+                                                                                   "<br><a class='btn btn-success' href='../rank'>Check the rank</a>"
         # Build the page to show
         template = env.get_template("userdata.html")
         current_menu = copy(menu_logged)
