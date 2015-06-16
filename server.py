@@ -215,7 +215,7 @@ class Login(object):
             cherrypy.session["id"] = user[0]
             cherrypy.session["name"] = user[1]+" "+user[2]
             cherrypy.session["username"] = user[5]
-        raise cherrypy.HTTPRedirect("/submit")
+        raise cherrypy.HTTPRedirect("../submit")
 
 
 class GetNewPassword(object):
@@ -318,13 +318,13 @@ class Submit(object):
             template = env.get_template("template.html")
             current_menu = copy(menu_logged)
             current_menu[4]["active"] = True
-            content = [{"title": "File missing!", "text": "<p style='color:red'>Please upload the three requested TXT files.</p>"}]
+            content = [{"title": "File missing!", "text": "<p style='color:red'>Please upload the three requested CSV files.</p>"}]
             return template.render(navigation=current_menu, content=content)
-        if entry1000.filename[-3:].upper() != "TXT" or entry10000.filename[-3:].upper() != "TXT" or entry20000.filename[-3:].upper() != "TXT":
+        if entry1000.filename[-3:].upper() != "CSV" or entry10000.filename[-3:].upper() != "CSV" or entry20000.filename[-3:].upper() != "CSV":
             template = env.get_template("template.html")
             current_menu = copy(menu_logged)
             current_menu[4]["active"] = True
-            content = [{"title": "File not valid!", "text": "<p style='color:red'>One of the files you are trying to upload is not a TXT file.</p>"}]
+            content = [{"title": "File not valid!", "text": "<p style='color:red'>One of the files you are trying to upload is not a CSV file.</p>"}]
             return template.render(navigation=current_menu, content=content)
         # Save the files in the submission directory
         date = time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime())
