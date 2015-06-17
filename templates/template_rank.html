@@ -39,6 +39,9 @@
             <img src="../img/poker.png" class="topimg">
         </p>
         <h2>Leaderboard</h2>
+        <p>The evaluation is performed using the area under the approximated piecewise linear connecting the three points representing the mean square errors computed on each output (1000, 10000 and 20000 samples).</p>
+        <p>Only 20% of the samples are used to compute the rank while the competition is open. The whole testing set will be used to compute the final ranking.</p>
+        {% if submissions|length %}
         <table class="table table-striped">
             <tr><th>Rank</th><th>Author</th><th>Date</th><th>Score</th></tr>
             {% for author, date, score in submissions %}
@@ -50,6 +53,9 @@
             </tr>
             {% endfor %}
         </table>
+        {% else %}
+            <h3 align="center">No submissions so far</h3>
+        {% endif %}
     </div>
     <div id="push"></div>
 </div>

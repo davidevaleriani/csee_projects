@@ -1,3 +1,34 @@
+<p>Your goal is to find the expected value of winning a poker hand given certain pocket cards (i.e. "hand") and a certain amount of players in the table.
+    Data is self-explanatory, but in a more intuitive way:</p>
+
+<p>n_players &#8594; Total number of players (ranges from 2 to 10)<br>
+pocket_0 &#8594; The first card you hold<br>
+pocket_1 &#8594; The second card you hold<br>
+board_0 &#8594; The first board card (part of the flop)<br>
+board_1 &#8594; The second board card (part of the flop)<br>
+board_2 &#8594; The third board card (part of the flop)<br>
+board_3 &#8594; The fourth board card (part of the turn)<br>
+board_4 &#8594; The fifth board card (part of the river)</p>
+
+<p>Cards have the following interpretation:</p>
+<table class="table table-condensed table-striped">
+    <tr><td>2h/00</td><td>2d/13</td><td>2c/26</td><td>2s/39</td></tr>
+    <tr><td>3h/01</td><td>3d/14</td><td>3c/27</td><td>3s/40</td></tr>
+    <tr><td>4h/02</td><td>4d/15</td><td>4c/28</td><td>4s/41</td></tr>
+    <tr><td>5h/03</td><td>5d/16</td><td>5c/29</td><td>5s/42</td></tr>
+    <tr><td>6h/04</td><td>6d/17</td><td>6c/30</td><td>6s/43</td></tr>
+    <tr><td>7h/05</td><td>7d/18</td><td>7c/31</td><td>7s/44</td></tr>
+    <tr><td>8h/06</td><td>8d/19</td><td>8c/32</td><td>8s/45</td></tr>
+    <tr><td>9h/07</td><td>9d/20</td><td>9c/33</td><td>9s/46</td></tr>
+    <tr><td>Th/08</td><td>Td/21</td><td>Tc/34</td><td>Ts/47</td></tr>
+    <tr><td>Jh/09</td><td>Jd/22</td><td>Jc/35</td><td>Js/48</td></tr>
+    <tr><td>Qh/10</td><td>Qd/23</td><td>Qc/36</td><td>Qs/49</td></tr>
+    <tr><td>Kh/11</td><td>Kd/24</td><td>Kc/37</td><td>Ks/50</td></tr>
+    <tr><td>Ah/12</td><td>Ad/25</td><td>Ac/38</td><td>As/51</td></tr>
+    <tr><td colspan="4">NoCard/255</td></tr>
+</table>
+
+
 <h3>Training</h3>
 <p>20000 trials representing combinations of 7 cards. Each trial is associated to a label representing the value of the hand.</p>
 <a href="../data/training_x.csv" class="btn btn-primary">Download data</a>

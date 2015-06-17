@@ -67,7 +67,7 @@ def load_y_hats(y_hats_dir):
     return values
 
 
-def get_score(submission_dir, labels_filename="data/testing_y.csv", percentage=0.1):
+def get_score(submission_dir, labels_filename="data/testing_y.csv", percentage=0.2):
     y_hats = load_y_hats(submission_dir)
     # Load labels
     df = pd.read_csv(labels_filename)
