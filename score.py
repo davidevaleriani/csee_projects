@@ -1,6 +1,10 @@
 import numpy as np
 import pandas as pd
 from sklearn.metrics import mean_squared_error as mse
+import os
+
+n_samples = [1000, 10000, 20000]
+
 
 # get the linear interpolant
 def get_linear_interpolant(x0, x1, y0, y1):
@@ -11,6 +15,7 @@ def get_linear_interpolant(x0, x1, y0, y1):
     theta = (y0 - y1) / (x0 - x1)
     # print bias, theta, "bias, theta"
     return bias, theta
+
 
 # find the area under a linear function
 def calculate_linear_integral(a, b, bias, theta):
@@ -23,7 +28,7 @@ def calculate_linear_integral(a, b, bias, theta):
 def calculate_area_under_piecewise_linear(num_samples, mses):
     # # pad with zeros
     # num_samples = [0.0] + num_samples
-    # # Start with a bad assumotion
+    # # Start with a bad assumption
     # mses = [1.0] + mses
     # convert to numpy floats, just in case
     num_samples = np.array(num_samples, dtype=float)
@@ -44,29 +49,40 @@ def calculate_area_under_piecewise_linear(num_samples, mses):
 
 
 def load_y_hats(y_hats_dir):
-    basic_name = y_hats_dir + "/sample"
-    # TODO decide which samples we want
-    n_samples = [1000, 10000, 20000]
+    filenames = next(os.walk(y_hats_dir))[2]
+    assert(len(filenames) == 1)
+
     values = []
-    for filename in [basic_name + "_" + str(sample) + ".csv" for sample in n_samples]:
+    for filename in filenames:
         try:
             print("Processing filename %s" % filename)
-            df = pd.read_csv(filename)
-            values.append(df.values.T[0])
+            df = pd.read_csv(y_hats_dir+filename)
+            print("Shape", df.values.T.shape)
+            for column in (df.values.T):
+                values.append(column)
         except Exception as e:
-            print('INCORRECT SUBMISSION %s' % filename)
+            print('INCORRECT SUBMISSION %s %s' % (filename, e))
             return None, None
-    return n_samples, values
+
+    return values
 
 
-def get_score(submission_dir, labels_filename="data/testing_y.csv"):
-    n_samples, y_hats = load_y_hats(submission_dir)
+def get_score(submission_dir, labels_filename="data/testing_y.csv", percentage=0.1):
+    y_hats = load_y_hats(submission_dir)
     # Load labels
     df = pd.read_csv(labels_filename)
     y = df.values.T[0]
+    # pad
+    for i in range(len(n_samples) - len(y_hats)):
+        y_hats.append(y_hats[-1])
 
-    if n_samples is None:
-        return 10.0
+    # percentage
+    test_samples = int(len(y)*percentage)
+    # Find the correct array size
+    y_hats = [y_hat[:test_samples] for y_hat in y_hats]
+    y = y[:test_samples]
+
+    assert(len(y_hats) == len(n_samples))
 
     mses = [mse(y, y_hat) for y_hat in y_hats]
     return calculate_area_under_piecewise_linear(n_samples, mses)

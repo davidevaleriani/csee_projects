@@ -65,7 +65,8 @@ class HomePage(object):
         content = [{"title": "Description", "text": (''.join(open("index.html").readlines())).decode('utf-8')},
                    {"title": "Getting started", "text": "<h3><a href='../data/'>Get the data</a> &#8594; "
                                                         "<a href='../signup/'>Signup</a> &#8594; "
-                                                        "<a href='../submit/'>Submit</a></h3>"}]
+                                                        "<a href='../submit/'>Submit</a> &#8594; "
+                                                        "<a href='../rank/'>Check the rank</a></h3>"}]
         return template.render(navigation=current_menu, content=content)
 
 
@@ -96,10 +97,15 @@ class Signup(object):
 
     @cherrypy.expose
     def register(self, username, password2, country, affiliation, name2, name1, password, email):
+        if username == "" or password == "" or affiliation == "" or email == "" or name1 == "" or name2 == "":
+            template = env.get_template("template.html")
+            current_menu = copy(menu)
+            content = [{"title": "Error", "text": "<h3 style='color:red'>Please provide all the information requested.</h3>"}]
+            return template.render(navigation=current_menu, content=content)
         if password != password2:
             template = env.get_template("template.html")
             current_menu = copy(menu)
-            content = [{"title": "Error", "text": "<p style='color:red'>The password are not the same</p>"}]
+            content = [{"title": "Error", "text": "<h3 style='color:red'>The password are not the same</h3>"}]
             return template.render(navigation=current_menu, content=content)
         password = hashlib.sha1(password).hexdigest()
         conn = sqlite3.connect(db_name)
@@ -110,7 +116,7 @@ class Signup(object):
             conn.close()
             template = env.get_template("template.html")
             current_menu = copy(menu)
-            content = [{"title": "Error", "text": "<p style='color:red'>Your username has already been taken or you.</p>"}]
+            content = [{"title": "Error", "text": "<h3 style='color:red'>Your username has already been taken or you.</h3>"}]
             return template.render(navigation=current_menu, content=content)
         c.execute("SELECT * FROM users WHERE email = ?", [email])
         user = c.fetchone()
@@ -118,7 +124,7 @@ class Signup(object):
             conn.close()
             template = env.get_template("template.html")
             current_menu = copy(menu)
-            content = [{"title": "Error", "text": "<p style='color:red'>Your email address is already registered. Please login.</p>"}]
+            content = [{"title": "Error", "text": "<h3 style='color:red'>Your email address is already registered. Please login.</h3>"}]
             return template.render(navigation=current_menu, content=content)
         # Send the confirmation email
         from_address = "competition@ceec.uk"
@@ -169,14 +175,14 @@ class Activate(object):
         if res is None:
             template = env.get_template("template.html")
             current_menu = copy(menu)
-            content = [{"title": "Error", "text": "<p style='color:red'>Link not valid</p>"}]
+            content = [{"title": "Error", "text": "<h3 style='color:red'>Link not valid</h3>"}]
             return template.render(navigation=current_menu, content=content)
         c.execute("SELECT * FROM users WHERE username = ? AND active=1", [user])
         res = c.fetchone()
         if res is not None:
             template = env.get_template("template.html")
             current_menu = copy(menu)
-            content = [{"title": "Error", "text": "<p style='color:red'>Your account has already been activated. Please <a href='../login'>login</a>.</p>"}]
+            content = [{"title": "Error", "text": "<h3 style='color:red'>Your account has already been activated. Please <a href='../login'>login</a>.</h3>"}]
             return template.render(navigation=current_menu, content=content)
         c.execute("UPDATE users SET active=1 WHERE username = ?", [user])
         conn.commit()
@@ -238,7 +244,7 @@ class GetNewPassword(object):
         if res is None:
             template = env.get_template("template.html")
             current_menu = copy(menu)
-            content = [{"title": "Email not valid!", "text": "<p style='color:red'>The email you have provided does not exist in our databases.</p>"}]
+            content = [{"title": "Email not valid!", "text": "<h3 style='color:red'>The email you have provided does not exist in our databases.</h3>"}]
             return template.render(navigation=current_menu, content=content)
         new_pass = ''.join(random.SystemRandom().choice(string.ascii_uppercase + string.ascii_lowercase + string.digits) for _ in range(10))
         c.execute("UPDATE users SET password = ? WHERE email = ?", [hashlib.sha1(new_pass).hexdigest(), email])
@@ -275,7 +281,7 @@ class GetNewPassword(object):
         # Success page
         template = env.get_template("template.html")
         current_menu = copy(menu)
-        content = [{"title": "Password reset!", "text": "<p>Your password has been reset and your new login details have been emailed to you.</p>"}]
+        content = [{"title": "Password reset!", "text": "<h3>Your password has been reset and your new login details have been emailed to you.</h3>"}]
         return template.render(navigation=current_menu, content=content)
 
 
@@ -313,35 +319,27 @@ class Submit(object):
             raise cherrypy.HTTPRedirect("../login")
 
     @cherrypy.expose
-    def make_submission(self, entry1000, entry10000, entry20000):
-        if entry1000.filename == "" or entry10000.filename == "" or entry20000.filename == "":
+    def make_submission(self, entry):
+        if entry.filename == "":
             template = env.get_template("template.html")
             current_menu = copy(menu_logged)
             current_menu[4]["active"] = True
-            content = [{"title": "File missing!", "text": "<p style='color:red'>Please upload the three requested CSV files.</p>"}]
+            content = [{"title": "File missing!", "text": "<h3 style='color:red'>Please select a file to upload.</h3>"}]
             return template.render(navigation=current_menu, content=content)
-        if entry1000.filename[-3:].upper() != "CSV" or entry10000.filename[-3:].upper() != "CSV" or entry20000.filename[-3:].upper() != "CSV":
+        if entry.filename[-3:].upper() != "CSV":
             template = env.get_template("template.html")
             current_menu = copy(menu_logged)
             current_menu[4]["active"] = True
-            content = [{"title": "File not valid!", "text": "<p style='color:red'>One of the files you are trying to upload is not a CSV file.</p>"}]
+            content = [{"title": "File not valid!", "text": "<h3 style='color:red'>The file you uploaded is not a CSV file.</h3>"}]
             return template.render(navigation=current_menu, content=content)
         # Save the files in the submission directory
         date = time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime())
         submission_dir = "submissions/"+date.replace(" ", "_")+"_"+str(cherrypy.session["id"])+"/"
         if not os.path.exists(submission_dir):
             os.makedirs(submission_dir)
-        filename = submission_dir+"sample_1000.csv"
+        filename = submission_dir+"submission.csv"
         output = open(filename, "w")
-        output.write(entry1000.file.read())
-        output.close()
-        filename = submission_dir+"sample_10000.csv"
-        output = open(filename, "w")
-        output.write(entry10000.file.read())
-        output.close()
-        filename = submission_dir+"sample_20000.csv"
-        output = open(filename, "w")
-        output.write(entry20000.file.read())
+        output.write(entry.file.read())
         output.close()
 
         # Get the score
