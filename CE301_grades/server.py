@@ -4,13 +4,17 @@ import os
 import csv
 import zipfile
 import tempfile
+import requests
+from requests_ntlm import HttpNtlmAuth
 import shutil
-from openpyxl import load_workbook
+from openpyxl import load_workbook, Workbook
 from openpyxl.styles import Border, Side
 import xlrd  # Support to old xls files
+from sharepoint import SharePointSite, basic_auth_opener
 
 USERS = {'csee': 'csee'}
 marks_dir = "marks/"
+
 
 class HomePage(object):
     def index(self):
@@ -56,6 +60,8 @@ class HomePage(object):
                 <div class="container">
                     <h2 align="center">Welcome to CSEE Grades Automator</h2>
                     <p align="center">This application allows you to generate the mark forms for final year projects.</p>
+                    <p align="center">If you want to download the marks from a zip file <a href="show_marks_report_page">click here</a></p>
+                    <p align="center">If you want to download the marks from SharePoint <a href="connect_to_sharepoint">click here</a></p>
                     <br>
                     <form method="get" action="generate" enctype="multipart/form-data" class="form-horizontal">
                         <div class="form-group">
@@ -129,10 +135,10 @@ class HomePage(object):
     def generate(self, template_sup="template_supervisor.xlsx", template_sec="template_second_assessor.xlsx", students_list="list_of_students.xls", name_column=2, surname_column=3, regno_column=1, sup_column=7, sec_column=8):
         # Load the template
         if template_sup.split(".")[-1].upper() == "XLSX" and template_sec.split(".")[-1].upper() == "XLSX":
-            mark_form_sup_doc = load_workbook(filename = template_sup)
+            mark_form_sup_doc = load_workbook(filename=template_sup)
             first_sheet = mark_form_sup_doc.get_sheet_names()[0]
             mark_form_sup = mark_form_sup_doc.get_sheet_by_name(first_sheet)
-            mark_form_sec_doc = load_workbook(filename = template_sec)
+            mark_form_sec_doc = load_workbook(filename=template_sec)
             first_sheet = mark_form_sec_doc.get_sheet_names()[0]
             mark_form_sec = mark_form_sec_doc.get_sheet_by_name(first_sheet)
             border = Border(left=Side(border_style='thin', color='00000000'),
@@ -344,6 +350,151 @@ class HomePage(object):
     def get_marks(self):
         marks_file = open("marks.zip", 'r')
         return cherrypy.lib.static.serve_fileobj(marks_file, disposition='attachment', name="marks.zip")
+
+    @cherrypy.expose
+    def connect_to_sharepoint(self):
+        # sudo pip install sharepoint
+        server_url = "https://sp.essex.ac.uk/"
+        site_url = server_url+"depts/csee/Pages/Default.aspx"
+        username = "dvaler"
+        password = ""
+        headers = {'accept': 'application/json;odata=verbose'}
+        r = requests.get("https://sp.essex.ac.uk/depts/csee/_api/web/getfolderbyserverrelativeurl('/depts/csee/Administration%20201516/Assessment/CE301')", auth=HttpNtlmAuth('CAMPUS\\'+username, password), headers=headers)
+
+    @cherrypy.expose
+    def show_marks_report_page(self):
+        return """
+            <html>
+            <head>
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap.min.css">
+                <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/js/bootstrap.min.js"></script>
+                <title>CSEE Grades Automator</title>
+                <style>
+                /* Wrapper for page content to push down footer */
+                html, body {
+                  padding-top: 0px;
+                  font-size: 15px;
+                  height: 100%;
+                }
+
+                #wrap {
+                  min-height: 100%;
+                  height: auto !important;
+                  height: 100%;
+                  /* Negative indent footer by it's height */
+                  margin: 0 auto -40px;
+                  padding-bottom: 10px;
+                }
+
+                /* Set the fixed height of the footer here */
+                #push,
+                #footer {
+                  height: 40px;
+                  padding-top: 10px;
+                }
+                #footer {
+                  font-size: 12px;
+                  background-color: #ddd;
+                  text-align: center;
+                }
+                </style>
+            </head>
+            <body>
+            <div id="wrap">
+                <div class="container">
+                    <h2 align="center">Welcome to CSEE Grades Automator</h2>
+                    <p align="center">This application allows you to download the marks from a zip file in a spreadsheet.</p>
+                    <p align="center">If you want to generate the marks forms <a href="index">click here</a></p>
+                    <p align="center">If you want to download the marks from SharePoint <a href="connect_to_sharepoint">click here</a></p>
+                    <br>
+                    <form method="get" action="get_marks_report" enctype="multipart/form-data" class="form-horizontal">
+                        <div class="form-group">
+                            <label for="marks" class="col-xs-2 col-xs-offset-2 control-label">Zip file</label>
+                            <div class="col-xs-6">
+                                <input type="file" name="marks" id="marks" />
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <div class="col-xs-offset-6 col-sm-6">
+                                <button type="submit" class="btn btn-primary">Generate</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div id="push"></div>
+            </div>
+            <div id="footer">
+                <div class="container">
+                    <p class="muted credit">Created by <a href="http://www.davidevaleriani.it">Davide Valeriani</a>.</p>
+                </div>
+            </div>
+            </body>
+            </html>
+            """
+
+    @cherrypy.expose
+    def get_marks_report(self, marks):
+        if not os.path.isdir("tmp"):
+            os.mkdir("tmp")
+        # Extract files
+        zipf = zipfile.ZipFile(marks, 'r')
+        zipf.extractall("tmp/")
+        # Init the marks spreadsheet
+        marks_wb = Workbook()
+        marks_ws = marks_wb.active
+        # Header
+        marks_ws['A1'] = "Student name"
+        marks_ws['B1'] = "Student registration number"
+        marks_ws['C1'] = "Supervisor first name"
+        marks_ws['D1'] = "Supervisor surname"
+        marks_ws['E1'] = "2nd assessor first name"
+        marks_ws['F1'] = "2nd assessor surname"
+        marks_ws['G1'] = "Initial report mark"
+        marks_ws['H1'] = "Interim report mark"
+        marks_ws['I1'] = "Poster mark"
+        marks_ws['J1'] = "Final report mark"
+        marks_ws['K1'] = "Logbook mark"
+        marks_ws['L1'] = "PDO mark"
+
+        # For each mark form
+        for dirname, dirnames, filenames in os.walk('tmp/'):
+            for f in filenames:
+                if "_sup" in f:
+                    # Get the marks
+                    print dirname+"/"+f
+                    doc = load_workbook(filename=dirname+"/"+f)
+                    first_sheet = doc.get_sheet_names()[0]
+                    form = doc.get_sheet_by_name(first_sheet)
+                    sup_name = form["C5"].value.split()[0]
+                    sup_surname = form["C5"].value.split()[1]
+                    sec_name = form["C6"].value.split()[0]
+                    sec_surname = form["C6"].value.split()[1]
+                    initial_report_mark = self.multiply_and_sum(form, 11, 13)
+                    interim_report_mark = self.multiply_and_sum(form, 17, 20)
+                    poster_mark = self.multiply_and_sum(form, 24, 26, column1="C")
+                    final_report_mark = self.multiply_and_sum(form, 30, 32)
+                    logbook_mark = self.multiply_and_sum(form, 36, 36, column1="C")
+                    pdo_mark = self.multiply_and_sum(form, 40, 43)
+                    marks_ws.append([form["C3"].value, form["C4"].value, sup_name, sup_surname, sec_name, sec_surname, initial_report_mark, interim_report_mark, poster_mark, final_report_mark, logbook_mark, pdo_mark])
+                else:
+                    continue
+        # Save the report
+        marks_wb.save("marks_report.xlsx")
+
+        # Remove the marks
+        shutil.rmtree('tmp')
+
+        # Return the file to download
+        marks_report = open("marks_report.xlsx", 'r')
+        return cherrypy.lib.static.serve_fileobj(marks_report, disposition='attachment', name="marks_report.xlsx")
+
+    def multiply_and_sum(self, sheet, first_row, last_row, column1="E", column2="F"):
+        mark = 0
+        for r in range(first_row, last_row+1):
+            mark += sheet[column1+str(r)].value*sheet[column2+str(r)].value
+        return mark
+
 
 if __name__ == '__main__':
     cherrypy.server.socket_host = '0.0.0.0'
