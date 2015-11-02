@@ -444,18 +444,20 @@ class HomePage(object):
         marks_wb = Workbook()
         marks_ws = marks_wb.active
         # Header
-        marks_ws['A1'] = "Student name"
-        marks_ws['B1'] = "Student registration number"
-        marks_ws['C1'] = "Supervisor first name"
-        marks_ws['D1'] = "Supervisor surname"
-        marks_ws['E1'] = "2nd assessor first name"
-        marks_ws['F1'] = "2nd assessor surname"
-        marks_ws['G1'] = "Initial report mark"
-        marks_ws['H1'] = "Interim report mark"
-        marks_ws['I1'] = "Poster mark"
-        marks_ws['J1'] = "Final report mark"
-        marks_ws['K1'] = "Logbook mark"
-        marks_ws['L1'] = "PDO mark"
+        marks_ws['A1'] = "Student first name"
+        marks_ws['B1'] = "Student surname"
+        marks_ws['C1'] = "Student registration number"
+        marks_ws['D1'] = "Supervisor first name"
+        marks_ws['E1'] = "Supervisor surname"
+        marks_ws['F1'] = "2nd assessor first name"
+        marks_ws['G1'] = "2nd assessor surname"
+        marks_ws['H1'] = "Initial report mark"
+        marks_ws['I1'] = "Interim report mark"
+        marks_ws['J1'] = "Poster mark"
+        marks_ws['K1'] = "Final report mark"
+        marks_ws['L1'] = "Logbook mark"
+        marks_ws['M1'] = "PDO mark"
+        marks_ws['N1'] = "Module total"
 
         # For each mark form
         for dirname, dirnames, filenames in os.walk('tmp/'):
@@ -466,6 +468,9 @@ class HomePage(object):
                     doc = load_workbook(filename=dirname+"/"+f)
                     first_sheet = doc.get_sheet_names()[0]
                     form = doc.get_sheet_by_name(first_sheet)
+                    student_name = " ".join(form["C3"].value.split(" ")[:-1])
+                    student_surname = form["C3"].value.split(" ")[-1]
+                    student_regno = form["C4"].value
                     sup_name = form["C5"].value.split()[0]
                     sup_surname = form["C5"].value.split()[1]
                     sec_name = form["C6"].value.split()[0]
@@ -476,7 +481,8 @@ class HomePage(object):
                     final_report_mark = self.multiply_and_sum(form, 30, 32)
                     logbook_mark = self.multiply_and_sum(form, 36, 36, column1="C")
                     pdo_mark = self.multiply_and_sum(form, 40, 43)
-                    marks_ws.append([form["C3"].value, form["C4"].value, sup_name, sup_surname, sec_name, sec_surname, initial_report_mark, interim_report_mark, poster_mark, final_report_mark, logbook_mark, pdo_mark])
+                    total = initial_report_mark*0.05+interim_report_mark*0.20+poster_mark*0.05+final_report_mark*0.5+logbook_mark*0.05+pdo_mark*0.15
+                    marks_ws.append([student_name, student_surname, student_regno, sup_name, sup_surname, sec_name, sec_surname, initial_report_mark, interim_report_mark, poster_mark, final_report_mark, logbook_mark, pdo_mark, total])
                 else:
                     continue
         # Save the report
