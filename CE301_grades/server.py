@@ -408,7 +408,7 @@ class HomePage(object):
                     <p align="center">If you want to generate the marks forms <a href="index">click here</a></p>
                     <p align="center">If you want to download the marks from SharePoint <a href="connect_to_sharepoint">click here</a></p>
                     <br>
-                    <form method="get" action="get_marks_report" enctype="multipart/form-data" class="form-horizontal">
+                    <form method="post" action="get_marks_report" enctype="multipart/form-data" class="form-horizontal">
                         <div class="form-group">
                             <label for="marks" class="col-xs-2 col-xs-offset-2 control-label">Zip file</label>
                             <div class="col-xs-6">
@@ -438,6 +438,8 @@ class HomePage(object):
         if not os.path.isdir("tmp"):
             os.mkdir("tmp")
         # Extract files
+        if type(marks) != file and hasattr(marks, "file"):
+            marks = marks.file
         zipf = zipfile.ZipFile(marks, 'r')
         zipf.extractall("tmp/")
         # Init the marks spreadsheet
@@ -498,7 +500,14 @@ class HomePage(object):
     def multiply_and_sum(self, sheet, first_row, last_row, column1="E", column2="F"):
         mark = 0
         for r in range(first_row, last_row+1):
-            mark += sheet[column1+str(r)].value*sheet[column2+str(r)].value
+            try:
+                mark += sheet[column1+str(r)].value*sheet[column2+str(r)].value
+            except:
+                if sheet[column1+str(r)].value[0] == "=":
+                    mark += 0.5*(sheet[chr(ord(column1)-2)+str(r)].value+sheet[chr(ord(column1)-1)+str(r)].value)*sheet[column2+str(r)].value
+                else:
+                    print column1+str(r), column2+str(r), sheet[column1+str(r)].value, sheet[column2+str(r)].value
+                    raise ValueError()
         return mark
 
 
