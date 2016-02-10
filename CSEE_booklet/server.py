@@ -11,6 +11,7 @@ from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.shared import Pt, Cm
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
+import xlrd
 
 class HomePage(object):
     @cherrypy.expose
@@ -85,6 +86,13 @@ class HomePage(object):
 
     @cherrypy.expose
     def get_booklet(self, marks):
+        # Get list of students
+        students = {}
+        workbook = xlrd.open_workbook("students_list.xls")
+        worksheets = workbook.sheet_names()
+        worksheet = workbook.sheet_by_name(worksheets[0])
+        for row in range(1, worksheet.nrows):
+            students[worksheet.cell_value(row, 0)] = worksheet.cell(row, 2)
         if not os.path.isdir("tmp"):
             os.mkdir("tmp")
         # Extract files
@@ -95,7 +103,7 @@ class HomePage(object):
         # Init the booklet document
         booklet_doc = Document("booklet_template.docx")
         booklet_doc.add_page_break()
-        # For each mark form
+        # For each abstract form
         for dirname, dirnames, filenames in os.walk('tmp/'):
             for f in filenames:
                 try:
@@ -117,6 +125,12 @@ class HomePage(object):
                         abstract += "\n".join(txt_file.split("\n")[counter+1:])
                         break
                     counter += 1
+                # get the degree from the students_list
+                reformatted_student_name = (student.split(" ")[-1]+", "+" ".join(student.split(" ")[:-1])).upper()
+                try:
+                    degree = students[reformatted_student_name]
+                except:
+                    degree = ""
                 heading = booklet_doc.add_paragraph()
                 paragraph_format = heading.paragraph_format
                 run = heading.add_run(project_title)
@@ -137,7 +151,7 @@ class HomePage(object):
                 table.cell(0, 0).paragraphs[0].add_run('Name:').bold = True
                 table.cell(0, 1).paragraphs[0].add_run(student).bold = True
                 table.cell(1, 0).paragraphs[0].add_run('Degree course:').bold = True
-                table.cell(1, 1).paragraphs[0].add_run('').bold = True
+                table.cell(1, 1).paragraphs[0].add_run(degree).bold = True
                 table.cell(2, 0).paragraphs[0].add_run('Supervisor:').bold = True
                 table.cell(2, 1).paragraphs[0].add_run(supervisor).bold = True
                 abstract_paragraph = booklet_doc.add_paragraph()
