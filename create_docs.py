@@ -20,7 +20,6 @@
 #
 #######################################################################
 
-from __future__ import print_function
 import sys
 from docx import *
 import csv
@@ -31,9 +30,10 @@ import shutil
 
 # CONFIGURATION
 
-template_filename = "template.docx"     # Model of the docx file to fill
-csv_filename = "sample_list.csv"        # List of students of CE101 (registration number; surname, first name(s); .....)
+template_filename = "template_rs.docx"     # Model of the docx file to fill
+csv_filename = "ce101_2016.csv"        # List of students of CE101 (registration number; surname, first name(s); .....)
 feedback_directory = "feedback/"        # Directory where the filled feedback documents will be saved
+marks_filename = "marks.csv"            # registration number;mark1;mark2...
 
 if len(sys.argv) > 3:
     print("Using: python %s [docx template] [CSV list of students]" % (sys.argv[0]))
@@ -53,17 +53,23 @@ if not os.path.isfile(csv_filename):
     exit(1)
 csv_file = open(csv_filename, 'rU')
 counter = 0
-for row in csv.reader(csv_file, delimiter=";", quotechar='|'):
+for row in csv.reader(csv_file, delimiter=",", quotechar='"'):
     # Skip the header row
     try:
         reg_number = int(row[0])
     except:
         continue
+    # Skip empty rows
+    if row[0] == "":
+        continue
     # Extract information about the student
-    surname = row[1].split(",")[0]
-    first_name = row[1].split(",")[1]
-    print("Processing", reg_number, first_name, surname)
-    output_filename = str(reg_number)+"_Team_Report_Feedback.docx"
+    #surname = row[1].split(" ")[0]
+    #first_name = row[1].split(",")[1]
+    full_name = row[3]
+    group_name = row[-1].split("Group ")[1]
+    print("Processing", reg_number, full_name)
+    #output_filename = str(reg_number)+"_Group_"+group_name+"_Team_Report_Feedback.docx"
+    output_filename = str(reg_number)+"_Reflective_Statement.docx"
     # Create the directory to store feedback
     if not os.path.isdir(feedback_directory):
         os.makedirs(feedback_directory)
@@ -83,9 +89,15 @@ for row in csv.reader(csv_file, delimiter=";", quotechar='|'):
         for node in tree.iter(tag=etree.Element):
             if node.tag == '{%s}%s' % (word_schema, 't'):
                 if "Name:" in node.text:
-                    node.text = "Name: "+first_name+" "+surname
+                    node.text = "Name: "+full_name
                 if len(node.text) == 1:
                     node.text = ""
+            if node.tag == '{%s}%s' % (word_schema, 'checkBox'):
+                for c in node.iterchildren():
+                    if c.tag == '{%s}%s' % (word_schema, 'default'):
+                        #c.set(c.keys()[0], "1")
+                        pass
+
 
         # Make temporary directory
         tmp_dir = tempfile.mkdtemp()
