@@ -27,17 +27,18 @@ import zipfile
 import tempfile
 import os
 import shutil
+import re
 
 # CONFIGURATION
 
-# Type of document (rs = Reflective Statement; tr = Team Report)
-type_of_document = "rs"
+# Type of document (rs = Reflective Statement; tr = Team Report; pf = Precis Feedback)
+type_of_document = "pf"
 # Main working directory
-main_folder = ""
+main_folder = "./"
 # Model of the docx file to fill
-template_filename = "CE101 Reflective Statement Feedback Form 2015.docx"
+template_filename = "template_pf_2017.docx"
 # List of students of CE101 (registration number; surname, first name(s); mark1; mark2; ...)
-csv_filename = "ce101_2016.csv"
+csv_filename = "students_list.csv"
 # Directory where the filled feedback documents will be saved
 feedback_directory = type_of_document+"/"
 # Columns settings (in the CSV file)
@@ -67,12 +68,18 @@ for row in csv.reader(csv_file, delimiter=",", quotechar='"'):
     # Extract information about the student
     #surname = row[1].split(" ")[0]
     #first_name = row[1].split(",")[1]
-    full_name = row[fullname_col]
+    names = row[fullname_col].strip(" ").split(",")
+    full_name = " ".join(row[fullname_col].split(",")).strip(" ").title()
+    # Remove double spaces
+    full_name = re.sub(' +', ' ', full_name)
     if type_of_document == "tr":
         group_name = row[-1].split("Group ")[1]
         output_filename = str(reg_number)+"_Group_"+group_name+"_Team_Report_Feedback.docx"
     elif type_of_document == "rs":
         output_filename = str(reg_number)+"_Reflective_Statement.docx"
+    elif type_of_document == "pf":
+        surname = full_name.split(" ")[0]
+        output_filename = str(reg_number)+"_"+surname+"_Precis_Feedback.docx"
     else:
         print "Type of document not supported"
         exit(1)
@@ -99,13 +106,14 @@ for row in csv.reader(csv_file, delimiter=",", quotechar='"'):
             if row[mark1_col+current_mark_index] == "":
                 current_mark = num_options_available_marks[current_mark_index]-1
                 enable_marking = False
+                continue
             else:
                 current_mark = int(row[mark1_col+current_mark_index])
                 enable_marking = True
         for node in tree.iter(tag=etree.Element):
             if node.tag == '{%s}%s' % (word_schema, 't'):
                 if "Name:" in node.text:
-                    node.text = "Name: "+full_name
+                    node.text = "Name: "+full_name.title()
                 if len(node.text) == 1:
                     node.text = ""
             if type_of_document == "rs":
