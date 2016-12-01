@@ -7,6 +7,7 @@ import tempfile
 import requests
 from requests_ntlm import HttpNtlmAuth
 import shutil
+import sys
 from openpyxl import load_workbook, Workbook
 from openpyxl.styles import Border, Side
 import xlrd  # Support to old xls files
@@ -435,13 +436,14 @@ class HomePage(object):
 
     @cherrypy.expose
     def get_marks_report(self, marks):
-        if not os.path.isdir("tmp"):
-            os.mkdir("tmp")
-        # Extract files
         if type(marks) != file and hasattr(marks, "file"):
             marks = marks.file
-        zipf = zipfile.ZipFile(marks, 'r')
-        zipf.extractall("tmp/")
+        if marks is not None:
+            if not os.path.isdir("tmp"):
+                os.mkdir("tmp")
+            # Extract files
+            zipf = zipfile.ZipFile(marks, 'r')
+            zipf.extractall("tmp/")
         # Init the marks spreadsheet
         marks_wb = Workbook()
         marks_ws = marks_wb.active
@@ -462,36 +464,45 @@ class HomePage(object):
         marks_ws['N1'] = "Module total"
 
         # For each mark form
+        errors = ""
         for dirname, dirnames, filenames in os.walk('tmp/'):
             for f in filenames:
                 if "_sup" in f:
                     # Get the marks
                     print dirname+"/"+f
-                    doc = load_workbook(filename=dirname+"/"+f)
-                    first_sheet = doc.get_sheet_names()[0]
-                    form = doc.get_sheet_by_name(first_sheet)
-                    student_name = " ".join(form["C3"].value.split(" ")[:-1])
-                    student_surname = form["C3"].value.split(" ")[-1]
-                    student_regno = form["C4"].value
-                    sup_name = form["C5"].value.split()[0]
-                    sup_surname = form["C5"].value.split()[1]
-                    sec_name = form["C6"].value.split()[0]
-                    sec_surname = form["C6"].value.split()[1]
-                    initial_report_mark = self.multiply_and_sum(form, 11, 13)
-                    interim_report_mark = self.multiply_and_sum(form, 17, 20)
-                    poster_mark = self.multiply_and_sum(form, 24, 26, column1="C")
-                    final_report_mark = self.multiply_and_sum(form, 30, 32)
-                    logbook_mark = self.multiply_and_sum(form, 36, 36, column1="C")
-                    pdo_mark = self.multiply_and_sum(form, 40, 43)
-                    total = initial_report_mark*0.05+interim_report_mark*0.20+poster_mark*0.05+final_report_mark*0.5+logbook_mark*0.05+pdo_mark*0.15
-                    marks_ws.append([student_name, student_surname, student_regno, sup_name, sup_surname, sec_name, sec_surname, initial_report_mark, interim_report_mark, poster_mark, final_report_mark, logbook_mark, pdo_mark, total])
+                    try:
+                        doc = load_workbook(filename=dirname+"/"+f)
+                        first_sheet = doc.get_sheet_names()[0]
+                        form = doc.get_sheet_by_name(first_sheet)
+                        student_name = " ".join(form["C3"].value.split(" ")[:-1])
+                        student_surname = form["C3"].value.split(" ")[-1]
+                        student_regno = form["C4"].value
+                        sup_name = form["C5"].value.split()[0]
+                        sup_surname = form["C5"].value.split()[1]
+                        sec_name = form["C6"].value.split()[0]
+                        sec_surname = form["C6"].value.split()[1]
+                        initial_report_mark = self.multiply_and_sum(form, 11, 13)
+                        interim_report_mark = self.multiply_and_sum(form, 17, 20)
+                        poster_mark = self.multiply_and_sum(form, 24, 26, column1="C")
+                        final_report_mark = self.multiply_and_sum(form, 30, 32)
+                        logbook_mark = self.multiply_and_sum(form, 36, 36, column1="C")
+                        pdo_mark = self.multiply_and_sum(form, 40, 43)
+                        total = initial_report_mark*0.05+interim_report_mark*0.20+poster_mark*0.05+final_report_mark*0.5+logbook_mark*0.05+pdo_mark*0.15
+                        marks_ws.append([student_name, student_surname, student_regno, sup_name, sup_surname, sec_name, sec_surname, initial_report_mark, interim_report_mark, poster_mark, final_report_mark, logbook_mark, pdo_mark, total])
+                    except AttributeError as e:
+                        errors += "WARNING: error in file %s\n" % (dirname+"/"+f)
+                        print sys.exc_info()[0]
+                        continue
                 else:
                     continue
+        if errors != "":
+            print "ERRORS\n", errors
         # Save the report
         marks_wb.save("marks_report.xlsx")
 
         # Remove the marks
-        shutil.rmtree('tmp')
+        if marks is not None:
+            shutil.rmtree('tmp')
 
         # Return the file to download
         marks_report = open("marks_report.xlsx", 'r')
@@ -501,7 +512,7 @@ class HomePage(object):
         mark = 0
         for r in range(first_row, last_row+1):
             try:
-                mark += sheet[column1+str(r)].value*sheet[column2+str(r)].value
+                mark += float(sheet[column1+str(r)].value)*float(sheet[column2+str(r)].value)
             except:
                 if sheet[column1+str(r)].value[0] == "=":
                     mark += 0.5*(sheet[chr(ord(column1)-2)+str(r)].value+sheet[chr(ord(column1)-1)+str(r)].value)*sheet[column2+str(r)].value
