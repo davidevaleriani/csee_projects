@@ -13,9 +13,15 @@ from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 import xlrd
 import csv
+import glob
+from PyPDF2 import PdfFileReader
+from io import IOBase
 import numpy as np
+import sys
+from openpyxl import load_workbook
 
 use_antiword = False
+
 
 class HomePage(object):
     @cherrypy.expose
@@ -92,6 +98,7 @@ class HomePage(object):
     def get_booklet(self, abstracts):
         # Get list of students for "backup"
         students = {}
+        poster_order = {}
         students_by_surname = {}
         if os.path.exists("CE301LST.csv"):
             # Load list of students from CSV file
@@ -102,21 +109,31 @@ class HomePage(object):
                     # strudents[regno] = (first names, surname, degree)
                     students[row[3]] = (row[1], row[4], row[2])
                     students_by_surname[row[4].upper()] = (row[1], row[2])
-        elif os.path.exists("students_list.xls"):
-            # Load list of students from Excel file
-            workbook = xlrd.open_workbook("students_list.xls")
-            worksheets = workbook.sheet_names()
-            worksheet = workbook.sheet_by_name(worksheets[0])
-            for row in range(1, worksheet.nrows):
-                students[worksheet.cell_value(row, 0)] = worksheet.cell(row, 2)
+        elif os.path.exists("students_list.xlsx"):
+            wb = load_workbook(filename='students_list.xlsx', read_only=True)
+            student_doc = wb.get_sheet_by_name(wb.get_sheet_names()[0])
+            row_iterator = student_doc.iter_rows()
+            # Skip the first row
+            next(row_iterator)
+            first_name_column = 4
+            last_name_column = 5
+            regno_column = 6
+            number_column = 10
+            degree_column = 7
+            for row in row_iterator:
+                if row[regno_column-1].value is not None:
+                    students[row[regno_column-1].value] = (row[first_name_column - 1].value,
+                                                           row[last_name_column - 1].value,
+                                                           row[degree_column - 1].value)
+                    poster_order[row[regno_column-1].value] = row[number_column - 1].value
         # Create the directory where the abstract will be temporarily saved
         if not os.path.isdir("tmp"):
             os.mkdir("tmp")
         # Extract files from the zip file
-        if type(abstracts) != file and hasattr(abstracts, "file"):
+        if isinstance(abstracts, IOBase) and hasattr(abstracts, "file"):
             abstracts = abstracts.file
-        zipf = zipfile.ZipFile(abstracts, 'r')
-        zipf.extractall("tmp/")
+        #zipf = zipfile.ZipFile(abstracts, 'r')
+        #zipf.extractall("tmp/")
         # Init the booklet document
         booklet_doc = Document("booklet_template.docx")
         booklet_doc.add_page_break()
@@ -124,35 +141,36 @@ class HomePage(object):
         files_not_inserted = []
         files_to_be_checked = []
         files_duplicated = []
-        titles = []
+        students_added = []
         # Sort abstracts by creation time
-        mtime = lambda f: os.stat(os.path.join('tmp/', f)).st_mtime
-        list_of_abstracts = list(sorted(os.listdir('tmp/'), key=mtime))[::-1]
+        #mtime = lambda f: os.stat(os.path.join('tmp/', f)).st_mtime
+        #list_of_abstracts = list(sorted(os.listdir('tmp/'), key=mtime))[::-1]
+        order_by_number = lambda f: poster_order[int(f)]-1
         # For each abstract form
-        for f in list_of_abstracts:
-            # Rename file to unix-like format (remove spaces, etc.)
-            os.rename("tmp/"+f, "tmp/"+f.replace(" ", "-").lower())
-            f = f.replace(" ", "-").lower()
-            if f in processed_files:
-                continue
-            processed_files.append(f)
+        print("TOTAL STUDENTS", len(list(students.keys())))
+        for student_regno in sorted(students.keys(), key=order_by_number):
+            student_first = students[student_regno][0]
+            student_last = students[student_regno][1]
+            degree = students[student_regno][2]
             project_title = ""
-            student_first = ""
-            student_last = ""
             supervisor_first = ""
             supervisor_last = ""
-            degree = ""
             abstract = ""
-            abstract_has_started = False
-            if f[-4:] == "docx":
-                # If the abstracts are in .docx format
-                document = Document("tmp/"+f)
-                # Get the degree course and the student names from the students list
-                if unicode(f[:7], 'utf-8').isnumeric() and f[:7] in students.keys():
-                    student_first = students[f[:7]][0].title()
-                    student_last = students[f[:7]][1].title()
-                    degree = students[f[:7]][2].title()
-                try:
+            if len(glob.glob("tmp/"+str(student_regno)+"*")) == 0:
+                print("!! WARNING: missing Document for student", student_regno)
+            else:
+                f = glob.glob("tmp/"+str(student_regno)+"*")[0]
+                # Rename file to unix-like format (remove spaces, etc.)
+                os.rename(f, f.replace(" ", "-").lower())
+                f = f.replace(" ", "-").lower()
+                if f in processed_files:
+                    print("Duplicate!")
+                    continue
+                processed_files.append(f)
+                abstract_has_started = False
+                if f[-4:] == "docx":
+                    # If the abstracts are in .docx format
+                    document = Document(f)
                     for p in document.paragraphs:
                         p = p.text
                         if "Title" in p and not project_title:
@@ -160,7 +178,7 @@ class HomePage(object):
                                 project_title = p.split("Title:")[1].lstrip()
                                 project_title = ' '.join(project_title.split())
                             except:
-                                print "WARNING: check title of", project_title
+                                print("WARNING %s: check TITLE" % f)
                                 if f in processed_files:
                                     processed_files.remove(f)
                                 if f not in files_to_be_checked:
@@ -176,7 +194,7 @@ class HomePage(object):
                                     raise
                                 student_first = ' '.join(student_first.split())
                             except:
-                                print "WARNING: check student name of", project_title
+                                print("WARNING %s: check STUDENT NAME" % f)
                                 if f in processed_files:
                                     processed_files.remove(f)
                                 if f not in files_to_be_checked:
@@ -187,7 +205,7 @@ class HomePage(object):
                                 student_last = p.split("Student Surname:")[1].lstrip()
                                 student_last = ' '.join(student_last.split())
                             except:
-                                print "WARNING: check student name of", project_title
+                                print("WARNING %s: check STUDENT SURNAME" % f)
                                 if f in processed_files:
                                     processed_files.remove(f)
                                 if f not in files_to_be_checked:
@@ -199,7 +217,7 @@ class HomePage(object):
                                 student_first = ' '.join(student_name.split(" ")[:-1])
                                 student_last = student_name.split(" ")[-1]
                             except:
-                                print "WARNING: check student name of", project_title
+                                print("WARNING %s: check STUDENT FULL NAME" % f)
                                 if f in processed_files:
                                     processed_files.remove(f)
                                 if f not in files_to_be_checked:
@@ -215,7 +233,7 @@ class HomePage(object):
                                     raise
                                 supervisor_first = ' '.join(supervisor_first.split())
                             except:
-                                print "WARNING: check supervisor of", project_title
+                                print("WARNING %s: check SUPERVISOR NAME" % f)
                                 if f in processed_files:
                                     processed_files.remove(f)
                                 if f not in files_to_be_checked:
@@ -226,19 +244,19 @@ class HomePage(object):
                                 supervisor_last = p.split("Supervisor Surname:")[1].lstrip()
                                 supervisor_last = ' '.join(supervisor_last.split())
                             except:
-                                print "WARNING: check supervisor of", project_title
+                                print("WARNING %s: check SUPERVISOR SURNAME" % f)
                                 if f in processed_files:
                                     processed_files.remove(f)
                                 if f not in files_to_be_checked:
                                     files_to_be_checked.append(f)
                                 supervisor_last = p
-                        elif "Supervisor" in p and not supervisor_first and not supervisor_last:
+                        elif "Supervisor" in p and (not supervisor_first or not supervisor_last):
                             try:
                                 supervisor = p.split(":")[1].lstrip()
                                 supervisor_first = ' '.join(supervisor.split(" ")[:-1])
                                 supervisor_last = supervisor.split(" ")[-1]
                             except:
-                                print "WARNING: check supervisor name of", project_title
+                                print("WARNING %s: check SUPERVISOR FULL NAME" % f)
                                 if f in processed_files:
                                     processed_files.remove(f)
                                 if f not in files_to_be_checked:
@@ -249,110 +267,158 @@ class HomePage(object):
                                 degree = p.split("Degree Course:")[1].lstrip()
                                 degree = ' '.join(degree.split())
                             except:
-                                print "WARNING: check degree of", project_title
+                                print("WARNING %s: check DEGREE" % f)
                                 if f in processed_files:
                                     processed_files.remove(f)
                                 if f not in files_to_be_checked:
                                     files_to_be_checked.append(f)
                                 degree = p
-                        elif "Abstract." not in p and abstract_has_started:
+                        elif abstract_has_started:
                             abstract += p
-                        elif "Abstract." in p:
-                            try:
-                                abstract = p.split("Abstract.")[1].lstrip()
+                        elif "ABSTRACT" in p.upper():
+                            if "Abstract" in p:
+                                abstract = p.split("Abstract")[1].lstrip()
                                 abstract_has_started = True
-                            except:
-                                print "WARNING: check abstract of", project_title
+                            elif "ABSTRACT" in p:
+                                abstract = p.split("ABSTRACT")[1].lstrip()
+                                abstract_has_started = True
+                            elif "abstract" in p:
+                                abstract = p.split("abstract")[1].lstrip()
+                                abstract_has_started = True
+                            else:
+                                print("WARNING %s: check ABSTRACT" % f)
                                 if f in processed_files:
                                     processed_files.remove(f)
                                 if f not in files_to_be_checked:
                                     files_to_be_checked.append(f)
                                 abstract = p
-                except:
-                    print "ERROR with file", f, "- SKIP"
-                    continue
-            elif f[-3:] == "doc":
-                # If the abstracts are in .doc format
-                try:
-                    # Convert the .doc to .txt
-                    txt_file = subprocess.check_output(["antiword", "tmp/%s" % f])
-                except:
-                    print "WARNING: unable to convert", f, "- SKIP"
-                    continue
-                counter = 0
-                for field in txt_file.split("\n"):
-                    field = field.lstrip()
-                    if "Title" in field:
-                        project_title = field.split("Title:")[1].lstrip()
-                    elif "Student".upper() in field.upper():
-                        student = field.split(":")[1].lstrip()
-                        student_first = ' '.join(student.split(" ")[:-1]) if len(student.split(" ")[:-1]) > 1 else student.split(" ")[:-1]
-                        student_last = student.split(" ")[-1]
-                    elif "Supervisor".upper() in field.upper():
-                        supervisor = field[len("Supervisor:"):].lstrip()
-                        supervisor_first = ' '.join(supervisor.split(":")[:-1]) if len(supervisor.split(":")[:-1]) > 1 else supervisor.split(":")[:-1]
-                        supervisor_last = supervisor.split(":")[-1]
-                    elif "Abstract".upper() in field.upper():
-                        abstract = field[len("Abstract."):].lstrip()
-                        abstract += "\n".join(txt_file.split("\n")[counter+1:])
-                        break
-                    counter += 1
-                # get the degree from the students_list
-                reformatted_student_name = (student.split(" ")[-1]+", "+" ".join(student.split(" ")[:-1])).upper()
-                try:
-                    degree = students[reformatted_student_name]
-                except:
-                    degree = ""
-            if not all([project_title, student_first, student_last, supervisor_first, supervisor_last]):
-                print "WARNING: file %s not inserted" % f
-                if f in processed_files:
-                    processed_files.remove(f)
-                if f not in files_not_inserted:
-                    files_not_inserted.append(f)
-                print "TITLE:", project_title
-                print "STUDENT:", student_first, " > ", student_last
-                print "SUPERVISOR:", supervisor_first, " > ",supervisor_last
-                print "DEGREE COURSE:", degree
-                print "ABSTRACT:", abstract
-                print
-                continue
+                            if abstract and abstract[0] == ".":
+                                abstract = abstract[1:]
+                elif f[-3:] == "doc":
+                    # If the abstracts are in .doc format
+                    try:
+                        # Convert the .doc to .txt
+                        txt_file = subprocess.check_output(["antiword", "%s" % f], universal_newlines=True)
+                    except:
+                        print("WARNING: unable to convert", f, "- SKIP")
+                        continue
+                    counter = 0
+                    for field in txt_file.split('\n'):
+                        field = field.lstrip()
+                        if "Title" in field:
+                            project_title = field.split("Title:")[1].lstrip()
+                        elif "Student".upper() in field.upper():
+                            student = field.split(":")[1].lstrip()
+                            student_first = (' '.join(student.split(" ")[:-1]))
+                            student_last = student.split(" ")[-1]
+                        elif "Supervisor".upper() in field.upper():
+                            supervisor = field[len("Supervisor:"):].lstrip()
+                            supervisor_first = ' '.join(supervisor.split(":")[:-1])
+                            supervisor_last = supervisor.split(":")[-1]
+                        elif "Abstract".upper() in field.upper():
+                            abstract = field[len("Abstract."):].lstrip()
+                            abstract += "\n".join(txt_file.split("\n")[counter+1:])
+                            break
+                        counter += 1
+                    if not degree:
+                        reformatted_student_name = (student.split(" ")[-1]+", "+" ".join(student.split(" ")[:-1])).upper()
+                        try:
+                            degree = students[reformatted_student_name]
+                        except:
+                            degree = ""
+                elif f[-3:].upper() == "PDF":
+                    pdf = PdfFileReader(open(f, "rb")).getPage(0).extractText().replace('\n', '').replace('\t', ' ').replace("  ", " ").replace("!", "")
+                    try:
+                        project_title = pdf.split("itle:")[1].lstrip().split("Student")[0]
+                    except:
+                        print("WARNING %s: check TITLE" % f)
+                        if f in processed_files:
+                            processed_files.remove(f)
+                        if f not in files_to_be_checked:
+                            files_to_be_checked.append(f)
+                    if not student_first or not student_last:
+                        try:
+                            student = pdf.split("Student:")[1].lstrip().split("Supervisor")[0].rstrip()
+                            student_first = " ".join(student.split(" ")[:-1])
+                            student_last = student.split(" ")[-1]
+                            reformatted_student_name = (student.split(" ")[-1] + ", " + " ".join(student.split(" ")[:-1])).upper()
+                        except:
+                            print("WARNING %s: check STUDENT FULL NAME" % f)
+                            if f in processed_files:
+                                processed_files.remove(f)
+                            if f not in files_to_be_checked:
+                                files_to_be_checked.append(f)
+                    else:
+                        reformatted_student_name = (student_last + ", " + student_first).upper()
+                    try:
+                        supervisor = pdf.split("Supervisor:")[1].lstrip().split("Abstract")[0].rstrip()
+                        supervisor_first = " ".join(supervisor.split(" ")[:-1])
+                        supervisor_last = supervisor.split(" ")[-1]
+                    except:
+                        print("WARNING %s: check SUPERVISOR FULL NAME" % f)
+                        if f in processed_files:
+                            processed_files.remove(f)
+                        if f not in files_to_be_checked:
+                            files_to_be_checked.append(f)
+                    try:
+                        abstract = pdf.split("Abstract")[1].lstrip()
+                        if abstract[:2] == ". ":
+                            abstract = abstract[2:]
+                    except:
+                        print("WARNING %s: check ABSTRACT" % f)
+                        if f in processed_files:
+                            processed_files.remove(f)
+                        if f not in files_to_be_checked:
+                            files_to_be_checked.append(f)
+                    if not degree:
+                        try:
+                            degree = students[reformatted_student_name]
+                        except:
+                            degree = ""
+            #if not all([project_title, student_first, student_last, supervisor_first, supervisor_last]):
+            #    print("WARNING: file %s not inserted" % f)
+            #    if f in processed_files:
+            #        processed_files.remove(f)
+            #    if f not in files_not_inserted:
+            #        files_not_inserted.append(f)
+                # print("TITLE:", project_title)
+                # print("STUDENT:", student_first, " > ", student_last)
+                # print("SUPERVISOR:", supervisor_first, " > ",supervisor_last)
+                # print("DEGREE COURSE:", degree)
+                # print("ABSTRACT:", abstract)
+                # print()
+            #    continue
             if not degree:
-                if student_last.upper() in students_by_surname.keys():
+                if student_last.upper() in list(students_by_surname.keys()):
                     degree = students_by_surname[student_last.upper()][1]
                 else:
-                    print "WARNING: file %s doesn't have a degree course" % f
+                    print("WARNING: file %s doesn't have a degree course" % f)
                     if f not in files_to_be_checked:
                         files_to_be_checked.append(f)
-                    print "TITLE:", project_title
-                    print "STUDENT:", student_first, student_last
-                    print "SUPERVISOR:", supervisor_first, supervisor_last
-                    print "DEGREE COURSE:", degree
-                    print "ABSTRACT:", abstract
-                    print
+                    # print("TITLE:", project_title)
+                    # print("STUDENT:", student_first, student_last)
+                    # print("SUPERVISOR:", supervisor_first, supervisor_last)
+                    # print("DEGREE COURSE:", degree)
+                    # print("ABSTRACT:", abstract)
+                    # print()
             if not abstract:
-                print "WARNING: file %s doesn't have an abstract" % f
+                print("WARNING: file %s doesn't have an abstract" % f)
                 if f not in files_to_be_checked:
                     files_to_be_checked.append(f)
-                print "TITLE:", project_title
-                print "STUDENT:", student_first, student_last
-                print "SUPERVISOR:", supervisor_first, supervisor_last
-                print "DEGREE COURSE:", degree
-                print "ABSTRACT:", abstract
-                print
-            if project_title.title() in titles:
-                #print "WARNING: file %s is a duplicate" % f
+                # print("TITLE:", project_title)
+                # print("STUDENT:", student_first, student_last)
+                # print("SUPERVISOR:", supervisor_first, supervisor_last)
+                # print("DEGREE COURSE:", degree)
+                # print("ABSTRACT:", abstract)
+                # print()
+            if student_regno in students_added:
+                print("WARNING: file %s is a duplicate" % f)
                 if f in processed_files:
                     processed_files.remove(f)
                 if f not in files_duplicated:
                     files_duplicated.append(f)
-                #print "TITLE:", project_title
-                #print "STUDENT:", student_first, student_last
-                #print "SUPERVISOR:", supervisor_first, supervisor_last
-                #print "DEGREE COURSE:", degree
-                #print "ABSTRACT:", abstract
-                #print
                 continue
-            titles.append(project_title.title())
+            students_added.append(student_regno)
             # Adding to the main document
             heading = booklet_doc.add_paragraph()
             paragraph_format = heading.paragraph_format
@@ -390,7 +456,7 @@ class HomePage(object):
         booklet_doc.save("booklet.docx")
 
         # Remove the marks
-        shutil.rmtree('tmp')
+        #shutil.rmtree('tmp')
 
         return """
         <html>
