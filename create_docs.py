@@ -11,7 +11,7 @@
 #   University of Essex
 #
 #   Command line:
-#   python create_docs.py [template.docx] [list_of_students.csv]
+#   python create_docs.py
 #
 #
 # Author: Davide Valeriani
@@ -32,12 +32,15 @@ import re
 # CONFIGURATION
 
 # Type of document (rs = Reflective Statement; tr = Team Report; pf = Precis Feedback)
-type_of_document = "pf"
+type_of_document = "tr"
 # Main working directory
 main_folder = "./"
 # Model of the docx file to fill
-template_filename = "template_pf_2017.docx"
-# List of students of CE101 (registration number; surname, first name(s); mark1; mark2; ...)
+template_filename = "template.docx"
+# List of students of CE101 (registration number; surname, first name(s))
+# Reflective statements also support automatic population of the marks. These should be added in the form
+# mark1; mark2; ...
+# in the CSV file of students, after the first name(s)
 csv_filename = "students_list.csv"
 # Directory where the filled feedback documents will be saved
 feedback_directory = type_of_document+"/"
@@ -45,10 +48,8 @@ feedback_directory = type_of_document+"/"
 regno_col = 0
 fullname_col = 1
 mark1_col = 2
-group_name_col = 3
+# Maximum number of options available for each mark (e.g., mark 1 could have "yes" or "no", so 2 options)
 num_options_available_marks = [2, 4, 2, 3, 3, 3, 2, 2]
-
-# MAIN
 
 # Check if the template is accessible
 if not os.path.isfile(main_folder+csv_filename):
@@ -66,30 +67,28 @@ for row in csv.reader(csv_file, delimiter=",", quotechar='"'):
     if row[regno_col] == "":
         continue
     # Extract information about the student
-    #surname = row[1].split(" ")[0]
-    #first_name = row[1].split(",")[1]
+    # Invert names to be first name <second name> surname
     names = row[fullname_col].strip(" ").split(",")
-    full_name = " ".join(row[fullname_col].split(",")).strip(" ").title()
+    full_name = (" ".join(names[1:])+" "+names[0]).strip(" ").title()
     # Remove double spaces
     full_name = re.sub(' +', ' ', full_name)
     if type_of_document == "tr":
-        group_name = row[-1].split("Group ")[1]
-        output_filename = str(reg_number)+"_Group_"+group_name+"_Team_Report_Feedback.docx"
+        output_filename = str(reg_number)+"_Team_Report_Feedback.docx"
     elif type_of_document == "rs":
         output_filename = str(reg_number)+"_Reflective_Statement.docx"
     elif type_of_document == "pf":
         surname = full_name.split(" ")[0]
         output_filename = str(reg_number)+"_"+surname+"_Precis_Feedback.docx"
     else:
-        print "Type of document not supported"
+        print("Type of document not supported")
         exit(1)
-    print("Processing", reg_number, full_name)
+    print(("Processing", reg_number, full_name))
     # Create the directory to store feedback
     if not os.path.isdir(main_folder+feedback_directory):
         os.makedirs(main_folder+feedback_directory)
     # Check if the template is accessible
     if not os.path.isfile(main_folder+template_filename):
-        print("Error: unable to open the file", main_folder+template_filename)
+        print(("Error: unable to open the file", main_folder+template_filename))
         exit(1)
     else:
         # Open template docx
@@ -125,7 +124,7 @@ for row in csv.reader(csv_file, delimiter=",", quotechar='"'):
                                 skip_checkbox -= 1
                             elif current_mark == 0:
                                 if enable_marking:
-                                    c.set(c.keys()[0], "1")
+                                    c.set(list(c.keys())[0], "1")
                                     skip_checkbox = num_options_available_marks[current_mark_index] - int(row[mark1_col+current_mark_index]) - 1
                                 current_mark_index += 1
                                 if (mark1_col + current_mark_index) >= len(row):
@@ -151,7 +150,7 @@ for row in csv.reader(csv_file, delimiter=",", quotechar='"'):
 
         # Get a list of all the files in the original docx zipfile
         filenames = zip.namelist()
-        # Now, create the new zip file and add all the filex into the archive
+        # Now, create the new zip file and add all the files into the archive
         zip_copy_filename = output_filename
         with zipfile.ZipFile(main_folder+feedback_directory+zip_copy_filename, "w") as docx:
             for filename in filenames:
@@ -161,4 +160,4 @@ for row in csv.reader(csv_file, delimiter=",", quotechar='"'):
         shutil.rmtree(tmp_dir)
         files_created += 1
 
-print("Process finished:", files_created, "file created")
+print(("Process finished:", files_created, "file created"))
