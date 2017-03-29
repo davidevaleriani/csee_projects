@@ -1,0 +1,15 @@
+#python
+*.pyc
+
+#virtualenv 
+venv
+
+#pickle files
+*.pkl
+
+#folders
+.idea
+tmp
+
+#zip files
+*.zip
