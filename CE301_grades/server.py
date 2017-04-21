@@ -8,6 +8,7 @@ import requests
 from requests_ntlm import HttpNtlmAuth
 import shutil
 import sys
+from io import IOBase
 from openpyxl import load_workbook, Workbook
 from openpyxl.styles import Border, Side
 import xlrd  # Support to old xls files
@@ -205,7 +206,6 @@ class HomePage(object):
             </body>
             </html>
             """
-            raise Exception("Only xlsx files are supported so far for templates")
 
         # Load the students list
         if students_list.split(".")[-1].upper() == "XLS":
@@ -334,7 +334,7 @@ class HomePage(object):
         else:
             raise Exception("Unable to serve this type of file")
         
-        print "Generate zip"
+        print("Generate zip")
         # Zip the marks
         zipf = zipfile.ZipFile('marks.zip', 'w')
         for root, dirs, files in os.walk(marks_dir):
@@ -436,7 +436,7 @@ class HomePage(object):
 
     @cherrypy.expose
     def get_marks_report(self, marks):
-        if type(marks) != file and hasattr(marks, "file"):
+        if not isinstance(marks, IOBase) and hasattr(marks, "file"):
             marks = marks.file
         if marks is not None:
             if not os.path.isdir("tmp"):
@@ -469,7 +469,7 @@ class HomePage(object):
             for f in filenames:
                 if "_sup" in f:
                     # Get the marks
-                    print dirname+"/"+f
+                    print(dirname+"/"+f)
                     try:
                         doc = load_workbook(filename=dirname+"/"+f)
                         first_sheet = doc.get_sheet_names()[0]
@@ -491,12 +491,12 @@ class HomePage(object):
                         marks_ws.append([student_name, student_surname, student_regno, sup_name, sup_surname, sec_name, sec_surname, initial_report_mark, interim_report_mark, poster_mark, final_report_mark, logbook_mark, pdo_mark, total])
                     except AttributeError as e:
                         errors += "WARNING: error in file %s\n" % (dirname+"/"+f)
-                        print sys.exc_info()[0]
+                        print(sys.exc_info()[0])
                         continue
                 else:
                     continue
         if errors != "":
-            print "ERRORS\n", errors
+            print("ERRORS\n", errors)
         # Save the report
         marks_wb.save("marks_report.xlsx")
 
@@ -517,7 +517,7 @@ class HomePage(object):
                 if sheet[column1+str(r)].value[0] == "=":
                     mark += 0.5*(sheet[chr(ord(column1)-2)+str(r)].value+sheet[chr(ord(column1)-1)+str(r)].value)*sheet[column2+str(r)].value
                 else:
-                    print column1+str(r), column2+str(r), sheet[column1+str(r)].value, sheet[column2+str(r)].value
+                    print(column1+str(r), column2+str(r), sheet[column1+str(r)].value, sheet[column2+str(r)].value)
                     raise ValueError()
         return mark
 
