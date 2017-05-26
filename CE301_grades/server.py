@@ -12,7 +12,6 @@ from io import IOBase
 from openpyxl import load_workbook, Workbook
 from openpyxl.styles import Border, Side
 import xlrd  # Support to old xls files
-from sharepoint import SharePointSite, basic_auth_opener
 
 USERS = {'csee': 'csee'}
 marks_dir = "marks/"
@@ -63,7 +62,6 @@ class HomePage(object):
                     <h2 align="center">Welcome to CSEE Grades Automator</h2>
                     <p align="center">This application allows you to generate the mark forms for final year projects.</p>
                     <p align="center">If you want to download the marks from a zip file <a href="show_marks_report_page">click here</a></p>
-                    <p align="center">If you want to download the marks from SharePoint <a href="connect_to_sharepoint">click here</a></p>
                     <br>
                     <form method="get" action="generate" enctype="multipart/form-data" class="form-horizontal">
                         <div class="form-group">
@@ -353,16 +351,6 @@ class HomePage(object):
         return cherrypy.lib.static.serve_fileobj(marks_file, disposition='attachment', name="marks.zip")
 
     @cherrypy.expose
-    def connect_to_sharepoint(self):
-        # sudo pip install sharepoint
-        server_url = "https://sp.essex.ac.uk/"
-        site_url = server_url+"depts/csee/Pages/Default.aspx"
-        username = "dvaler"
-        password = ""
-        headers = {'accept': 'application/json;odata=verbose'}
-        r = requests.get("https://sp.essex.ac.uk/depts/csee/_api/web/getfolderbyserverrelativeurl('/depts/csee/Administration%20201516/Assessment/CE301')", auth=HttpNtlmAuth('CAMPUS\\'+username, password), headers=headers)
-
-    @cherrypy.expose
     def show_marks_report_page(self):
         return """
             <html>
@@ -407,7 +395,6 @@ class HomePage(object):
                     <h2 align="center">Welcome to CSEE Grades Automator</h2>
                     <p align="center">This application allows you to download the marks from a zip file in a spreadsheet.</p>
                     <p align="center">If you want to generate the marks forms <a href="index">click here</a></p>
-                    <p align="center">If you want to download the marks from SharePoint <a href="connect_to_sharepoint">click here</a></p>
                     <br>
                     <form method="post" action="get_marks_report" enctype="multipart/form-data" class="form-horizontal">
                         <div class="form-group">
