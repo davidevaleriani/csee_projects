@@ -1,11 +1,7 @@
 import cherrypy
-from cherrypy.lib import auth_basic
 import os
 import csv
 import zipfile
-import tempfile
-import requests
-from requests_ntlm import HttpNtlmAuth
 import shutil
 import sys
 from io import IOBase
@@ -287,7 +283,7 @@ class HomePage(object):
                 mark_form_sec_doc.save(marks_dir+student_sec+"/"+student_surname+'_sec.xlsx')
 
         elif students_list.split(".")[-1].upper() == "XLSX":
-            workbook = load_workbook(students_list, use_iterators=True)
+            workbook = load_workbook(students_list)
             first_sheet = workbook.get_sheet_names()[0]
             worksheet = workbook.get_sheet_by_name(first_sheet)
             row_iterator = worksheet.iter_rows()
@@ -329,6 +325,83 @@ class HomePage(object):
                 if not os.path.isdir(marks_dir+student_sec+"/"):
                     os.makedirs(marks_dir+student_sec+"/")
                 mark_form_sec_doc.save(marks_dir+student_sec+"/"+student_surname+'_sec.xlsx')
+        elif students_list.split(".")[-1].upper() == "CSV":
+            with open(students_list) as f:
+                for row in csv.reader(f):
+                    student_surname = row[int(surname_column)-1]
+                    student_name = row[int(name_column) - 1]
+                    student_regno = row[int(regno_column) - 1]
+                    student_sup = row[int(sup_column) - 1]
+                    student_sec = row[int(sec_column) - 1]
+                    # Populating
+                    # Name
+                    print(student_name, student_surname, student_regno, student_sup, student_sec)
+                    mark_form_sup['C3'] = student_name + " " + student_surname
+                    mark_form_sec['C3'] = student_name + " " + student_surname
+                    # Registration number
+                    mark_form_sup['C4'] = student_regno
+                    mark_form_sec['C4'] = student_regno
+                    # Supervisor
+                    mark_form_sup['C5'] = mark_form_sec['C5'] = student_sup
+                    # Second assessor
+                    mark_form_sup['C6'] = mark_form_sec['C6'] = student_sec
+                    # Fixing borders
+                    for r in mark_form_sup['G3':'G6']:
+                        for cell in r:
+                            cell.border = border
+                    for r in mark_form_sup['J2':'J44']:
+                        for cell in r:
+                            cell.border = border
+                    for r in mark_form_sup['L1':'L45']:
+                        for cell in r:
+                            cell.border = Border(left=Side(border_style='medium', color='00000000'))
+                    for r in mark_form_sup['A10':'A44']:
+                        for cell in r:
+                            cell.border = border
+                    for r in mark_form_sup['A46':'K46']:
+                        for cell in r:
+                            cell.border = Border(top=Side(border_style='medium', color='00000000'))
+                    for r in mark_form_sec['F1':'F33']:
+                        for cell in r:
+                            cell.border = Border(right=Side(border_style='medium', color='00000000'))
+                    for r in mark_form_sec['C3':'E6']:
+                        for cell in r:
+                            cell.border = border
+                    for r in mark_form_sec['B8':'E8']:
+                        for cell in r:
+                            cell.border = border
+                    for r in mark_form_sec['A9':'A32']:
+                        for cell in r:
+                            cell.border = border
+                    mark_form_sup['H27'].border = border
+                    mark_form_sup['I27'].border = border
+                    mark_form_sup['H37'].border = border
+                    mark_form_sup['I37'].border = border
+                    mark_form_sec['F1'].border = Border(right=Side(border_style='medium', color='00000000'))
+                    mark_form_sec['F2'].border = Border(right=Side(border_style='medium', color='00000000'),
+                                                             top=Side(border_style=None),
+                                                             left=Side(border_style=None))
+                    mark_form_sec['F7'].border = Border(right=Side(border_style='medium', color='00000000'),
+                                                             left=Side(border_style=None))
+                    mark_form_sec['F8'].border = Border(right=Side(border_style='medium', color='00000000'))
+                    mark_form_sec['F14'].border = Border(right=Side(border_style='medium', color='00000000'))
+                    mark_form_sec['F21'].border = Border(right=Side(border_style='medium', color='00000000'))
+                    mark_form_sec['F27'].border = Border(right=Side(border_style='medium', color='00000000'))
+                    mark_form_sec['D26'].border = border
+                    mark_form_sec['D20'].border = border
+                    mark_form_sec['D13'].border = border
+                    mark_form_sec['F33'].border = Border(right=Side(border_style='medium', color='00000000'),
+                                                              bottom=Side(border_style='medium', color='00000000'), )
+
+                    # Saving files in the specific folders
+                    if not os.path.isdir(marks_dir):
+                        os.makedirs(marks_dir)
+                    if not os.path.isdir(marks_dir + student_sup + "/"):
+                        os.makedirs(marks_dir + student_sup + "/")
+                    mark_form_sup_doc.save(marks_dir + student_sup + "/" + student_surname + '_sup.xlsx')
+                    if not os.path.isdir(marks_dir + student_sec + "/"):
+                        os.makedirs(marks_dir + student_sec + "/")
+                    mark_form_sec_doc.save(marks_dir + student_sec + "/" + student_surname + '_sec.xlsx')
         else:
             raise Exception("Unable to serve this type of file")
         
