@@ -79,7 +79,7 @@ class HomePage(object):
     def generate(self):
         # Settings
         template_name = "template.xlsx"
-        students_list = "students_list.csv"
+        students_list = "datasource.csv"
         marks_dir = "marks/"
         # Load the template
         mark_form_doc = load_workbook(filename=template_name)
@@ -99,8 +99,10 @@ class HomePage(object):
                                                                              'stud3_regno', 'stud3_name',
                                                                              'stud4_regno', 'stud4_name',
                                                                              'stud5_regno', 'stud5_name',
-                                                                             'stud6_regno', 'stud6_name'),
+                                                                             'stud6_regno', 'stud6_name',
+                                                                             'stud7_regno', 'stud7_name'),
                                                                    'formats': ('S10', 'S30', 'S30',
+                                                                               'S7', 'S30',
                                                                                'S7', 'S30',
                                                                                'S7', 'S30',
                                                                                'S7', 'S30',
@@ -135,7 +137,7 @@ class HomePage(object):
                 zipf.write(os.path.join(root, f))
         zipf.close()
         # Remove the marks directory
-        shutil.rmtree(marks_dir)
+        #shutil.rmtree(marks_dir)
         # Return the file to download
         marks_file = open("marks.zip", 'r')
         return cherrypy.lib.static.serve_fileobj(marks_file, disposition='attachment', name="marks.zip")

@@ -1,3 +1,4 @@
+from __future__ import division, print_function
 import cherrypy
 import os
 import csv
@@ -501,9 +502,9 @@ class HomePage(object):
         if marks is not None:
             if not os.path.isdir("tmp"):
                 os.mkdir("tmp")
-            # Extract files
-            zipf = zipfile.ZipFile(marks, 'r')
-            zipf.extractall("tmp/")
+                # Extract files
+                zipf = zipfile.ZipFile(marks, 'r')
+                zipf.extractall("tmp/")
         # Init the marks spreadsheet
         marks_wb = Workbook()
         marks_ws = marks_wb.active
@@ -527,6 +528,9 @@ class HomePage(object):
         errors = ""
         for dirname, dirnames, filenames in os.walk('tmp/'):
             for f in filenames:
+                if f[-4:].upper() not in ["XLSX", ".XLS"]:
+                    print("Ignoring file", f)
+                    continue
                 if "_sup" in f:
                     # Get the marks
                     print(dirname+"/"+f)
@@ -542,12 +546,17 @@ class HomePage(object):
                         sec_name = form["C6"].value.split()[0]
                         sec_surname = form["C6"].value.split()[1]
                         initial_report_mark = self.multiply_and_sum(form, 11, 13)
-                        interim_report_mark = self.multiply_and_sum(form, 17, 19, column1="C")
-                        poster_mark = self.multiply_and_sum(form, 23, 25, column1="C")
-                        final_report_mark = self.multiply_and_sum(form, 29, 31)
-                        logbook_mark = self.multiply_and_sum(form, 35, 35, column1="C")
-                        pdo_mark = self.multiply_and_sum(form, 39, 42)
-                        total = initial_report_mark*0.05+interim_report_mark*0.10+poster_mark*0.05+final_report_mark*0.55+logbook_mark*0.05+pdo_mark*0.20
+                        interim_report_mark = self.multiply_and_sum(form, 17, 20)
+                        poster_mark = self.multiply_and_sum(form, 24, 26, column1="C")
+                        final_report_mark = self.multiply_and_sum(form, 30, 32)
+                        logbook_mark = self.multiply_and_sum(form, 36, 36, column1="C")
+                        pdo_mark = self.multiply_and_sum(form, 40, 43)
+                        total = initial_report_mark*0.05+\
+                                interim_report_mark*0.20+\
+                                poster_mark*0.05+\
+                                final_report_mark*0.50+\
+                                logbook_mark*0.05+\
+                                pdo_mark*0.15
                         marks_ws.append([student_name, student_surname, student_regno, sup_name, sup_surname, sec_name, sec_surname, initial_report_mark, interim_report_mark, poster_mark, final_report_mark, logbook_mark, pdo_mark, total])
                     except AttributeError as e:
                         errors += "WARNING: error in file %s\n" % (dirname+"/"+f)
