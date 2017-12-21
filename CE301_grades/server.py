@@ -526,6 +526,7 @@ class HomePage(object):
 
         # For each mark form
         errors = ""
+        weights = None
         for dirname, dirnames, filenames in os.walk('tmp/'):
             for f in filenames:
                 if f[-4:].upper() not in ["XLSX", ".XLS"]:
@@ -546,17 +547,26 @@ class HomePage(object):
                         sec_name = form["C6"].value.split()[0]
                         sec_surname = form["C6"].value.split()[1]
                         initial_report_mark = self.multiply_and_sum(form, 11, 13)
-                        interim_report_mark = self.multiply_and_sum(form, 17, 20)
-                        poster_mark = self.multiply_and_sum(form, 24, 26, column1="C")
-                        final_report_mark = self.multiply_and_sum(form, 30, 32)
-                        logbook_mark = self.multiply_and_sum(form, 36, 36, column1="C")
-                        pdo_mark = self.multiply_and_sum(form, 40, 43)
-                        total = initial_report_mark*0.05+\
-                                interim_report_mark*0.20+\
-                                poster_mark*0.05+\
-                                final_report_mark*0.50+\
-                                logbook_mark*0.05+\
-                                pdo_mark*0.15
+                        interim_report_mark = self.multiply_and_sum(form, 17, 19, column1="C")
+                        poster_mark = self.multiply_and_sum(form, 23, 25, column1="C")
+                        final_report_mark = self.multiply_and_sum(form, 29, 31)
+                        logbook_mark = self.multiply_and_sum(form, 35, 35, column1="C")
+                        pdo_mark = self.multiply_and_sum(form, 39, 42)
+                        if weights is None:
+                            weights = {
+                                "initial_report": float(form["A10"].value.split("(")[1].split("%")[0]) / 100,
+                                "interim_report": float(form["A16"].value.split("(")[1].split("%")[0]) / 100,
+                                "poster": float(form["A23"].value.split("(")[1].split("%")[0]) / 100,
+                                "final_report": float(form["A29"].value.split("(")[1].split("%")[0]) / 100,
+                                "logbook": float(form["A35"].value.split("(")[1].split("%")[0]) / 100,
+                                "pdo": float(form["A39"].value.split("(")[1].split("%")[0]) / 100,
+                            }
+                        total = initial_report_mark*weights["initial_report"]+\
+                                interim_report_mark*weights["interim_report"]+\
+                                poster_mark*weights["poster"]+\
+                                final_report_mark*weights["final_report"]+\
+                                logbook_mark*weights["logbook"]+\
+                                pdo_mark*weights["pdo"]
                         marks_ws.append([student_name, student_surname, student_regno, sup_name, sup_surname, sec_name, sec_surname, initial_report_mark, interim_report_mark, poster_mark, final_report_mark, logbook_mark, pdo_mark, total])
                     except AttributeError as e:
                         errors += "WARNING: error in file %s\n" % (dirname+"/"+f)
