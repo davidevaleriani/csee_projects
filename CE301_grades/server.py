@@ -590,6 +590,12 @@ class HomePage(object):
     def multiply_and_sum(self, sheet, first_row, last_row, column1="E", column2="F"):
         mark = 0
         for r in range(first_row, last_row+1):
+            if sheet[column1+str(r)].value is None:
+                print("WARNING: setting", column1+str(r), "to 0")
+                sheet[column1 + str(r)].value = 0
+            if sheet[column2+str(r)].value is None:
+                print("WARNING: setting", column1 + str(r), "to 0")
+                sheet[column1 + str(r)].value = 0
             try:
                 mark += float(sheet[column1+str(r)].value)*float(sheet[column2+str(r)].value)
             except:
